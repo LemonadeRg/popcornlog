@@ -9,7 +9,43 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
-const OMDB_API_KEY = process.env.OMDB_API_KEY;
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMG  = 'https://image.tmdb.org/t/p/w500';
+
+// Helper: fetch full movie details from TMDB by title
+async function tmdbFetchByTitle(title) {
+  // Search
+  const search = await axios.get(`${TMDB_BASE}/search/movie`, {
+    params: { api_key: TMDB_API_KEY, query: title, language: 'en-US', page: 1 }
+  });
+  if (!search.data.results || search.data.results.length === 0) return null;
+  const found = search.data.results[0];
+  return tmdbFetchById(found.id);
+}
+
+// Helper: fetch full movie details from TMDB by TMDB id
+async function tmdbFetchById(id) {
+  const [details, credits] = await Promise.all([
+    axios.get(`${TMDB_BASE}/movie/${id}`, { params: { api_key: TMDB_API_KEY, language: 'en-US' } }),
+    axios.get(`${TMDB_BASE}/movie/${id}/credits`, { params: { api_key: TMDB_API_KEY } })
+  ]);
+  const m = details.data;
+  const director = credits.data.crew.find(c => c.job === 'Director');
+  const actors = credits.data.cast.slice(0, 3).map(a => a.name).join(', ');
+  return {
+    title:      m.title,
+    year:       m.release_date ? m.release_date.substring(0, 4) : 'N/A',
+    poster:     m.poster_path ? TMDB_IMG + m.poster_path : 'N/A',
+    genre:      m.genres.map(g => g.name).join(', '),
+    director:   director ? director.name : 'N/A',
+    actors,
+    runtime:    m.runtime ? `${m.runtime} min` : 'N/A',
+    imdbRating: m.vote_average ? m.vote_average.toFixed(1) : 'N/A',
+    plot:       m.overview || 'N/A',
+    tmdbId:     m.id
+  };
+}
 const ADMIN_EMAIL = 'ragraguiriyad@gmail.com';
 
 
@@ -193,22 +229,15 @@ app.get('/api/movies', requireAuth, async (req, res) => {
 // Add movie
 app.post('/api/movies', requireAuth, async (req, res) => {
   const { movieName, rating, notes } = req.body;
-
   try {
-    const response = await axios.get('http://www.omdbapi.com/', {
-      params: { apikey: OMDB_API_KEY, t: movieName, type: 'movie' }
-    });
+    const movie = await tmdbFetchByTitle(movieName);
+    if (!movie) return res.status(404).json({ error: 'Movie not found' });
 
-    if (response.data.Response === 'False') {
-      return res.status(404).json({ error: 'Movie not found' });
-    }
-
-    const movie = response.data;
     await db.query(
       `INSERT INTO movies (user_id, title, genres, director, "mainCharacter", year, "imdbRating", runtime, "posterUrl", plot, rating, "userNotes")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [req.session.userId, movie.Title, movie.Genre, movie.Director, movie.Actors,
-       movie.Year, movie.imdbRating, movie.Runtime, movie.Poster, movie.Plot, rating, notes]
+      [req.session.userId, movie.title, movie.genre, movie.director, movie.actors,
+       movie.year, movie.imdbRating, movie.runtime, movie.poster, movie.plot, rating, notes]
     );
     res.json({ success: true });
   } catch (err) {
@@ -261,22 +290,15 @@ app.get('/api/watchlist', requireAuth, async (req, res) => {
 // Add to watchlist
 app.post('/api/watchlist', requireAuth, async (req, res) => {
   const { movieName } = req.body;
-
   try {
-    const response = await axios.get('http://www.omdbapi.com/', {
-      params: { apikey: OMDB_API_KEY, t: movieName, type: 'movie' }
-    });
+    const movie = await tmdbFetchByTitle(movieName);
+    if (!movie) return res.status(404).json({ error: 'Movie not found' });
 
-    if (response.data.Response === 'False') {
-      return res.status(404).json({ error: 'Movie not found' });
-    }
-
-    const movie = response.data;
     await db.query(
       `INSERT INTO watchlist (user_id, title, genres, director, "mainCharacter", year, "imdbRating", runtime, "posterUrl", plot)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [req.session.userId, movie.Title, movie.Genre, movie.Director, movie.Actors,
-       movie.Year, movie.imdbRating, movie.Runtime, movie.Poster, movie.Plot]
+      [req.session.userId, movie.title, movie.genre, movie.director, movie.actors,
+       movie.year, movie.imdbRating, movie.runtime, movie.poster, movie.plot]
     );
     res.json({ success: true });
   } catch (err) {
@@ -328,16 +350,15 @@ app.post('/api/watchlist-to-movies/:id', requireAuth, async (req, res) => {
 // Search movies
 app.get('/api/search/:query', requireAuth, async (req, res) => {
   try {
-    const response = await axios.get('http://www.omdbapi.com/', {
-      params: { apikey: OMDB_API_KEY, s: req.params.query, type: 'movie' }
+    const response = await axios.get(`${TMDB_BASE}/search/movie`, {
+      params: { api_key: TMDB_API_KEY, query: req.params.query, language: 'en-US', page: 1 }
     });
+    if (!response.data.results || response.data.results.length === 0) return res.json({ results: [] });
 
-    if (response.data.Response === 'False') return res.json({ results: [] });
-
-    const results = response.data.Search.slice(0, 5).map(movie => ({
-      title: movie.Title,
-      year: movie.Year,
-      poster: movie.Poster
+    const results = response.data.results.slice(0, 6).map(m => ({
+      title:  m.title,
+      year:   m.release_date ? m.release_date.substring(0, 4) : 'N/A',
+      poster: m.poster_path ? TMDB_IMG + m.poster_path : null
     }));
     res.json({ results });
   } catch (err) {
@@ -530,33 +551,41 @@ app.get('/api/recommendations', requireAuth, async (req, res) => {
 
     const topGenre = Object.entries(genreCount).sort((a, b) => b[1] - a[1])[0][0];
 
-    const shuffled = [...IMDB_TOP_250].sort(() => Math.random() - 0.5);
+    // Use TMDB discover to find top movies in the user's top genre
+    const genreMapRes = await axios.get(`${TMDB_BASE}/genre/movie/list`, {
+      params: { api_key: TMDB_API_KEY, language: 'en-US' }
+    });
+    const genreObj = genreMapRes.data.genres.find(g =>
+      g.name.toLowerCase().includes(topGenre.toLowerCase()) ||
+      topGenre.toLowerCase().includes(g.name.toLowerCase())
+    );
+
     const recommendations = [];
-
-    for (let i = 0; i < shuffled.length && recommendations.length < 6; i += 10) {
-      const batch = shuffled.slice(i, i + 10);
-      const batchDetails = await Promise.all(
-        batch.map(id =>
-          axios.get('http://www.omdbapi.com/', {
-            params: { apikey: OMDB_API_KEY, i: id }
-          }).then(r => r.data).catch(() => null)
-        )
-      );
-
-      batchDetails.forEach(m => {
-        if (
-          m && m.Response !== 'False' &&
-          m.Poster && m.Poster !== 'N/A' &&
-          !watchedTitles.has(m.Title.toLowerCase()) &&
-          m.Genre && m.Genre.toLowerCase().includes(topGenre.toLowerCase()) &&
-          recommendations.length < 6
-        ) {
-          recommendations.push({
-            title: m.Title, year: m.Year, poster: m.Poster,
-            imdbRating: m.imdbRating, genre: m.Genre
-          });
+    let page = 1;
+    while (recommendations.length < 6 && page <= 3) {
+      const discoverRes = await axios.get(`${TMDB_BASE}/discover/movie`, {
+        params: {
+          api_key: TMDB_API_KEY,
+          language: 'en-US',
+          sort_by: 'vote_average.desc',
+          'vote_count.gte': 1000,
+          with_genres: genreObj ? genreObj.id : undefined,
+          page
         }
       });
+      for (const m of discoverRes.data.results) {
+        if (recommendations.length >= 6) break;
+        if (!m.poster_path) continue;
+        if (watchedTitles.has(m.title.toLowerCase())) continue;
+        recommendations.push({
+          title: m.title,
+          year: m.release_date ? m.release_date.substring(0, 4) : 'N/A',
+          poster: TMDB_IMG + m.poster_path,
+          imdbRating: m.vote_average.toFixed(1),
+          genre: topGenre
+        });
+      }
+      page++;
     }
 
     res.json({ results: recommendations, genre: topGenre });
