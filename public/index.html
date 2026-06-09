@@ -74,12 +74,13 @@
   <!-- MAIN APP PAGE -->
   <div id="appPage" style="display: none;">
 
+    <!-- TOP-LEFT LOGO (fixed, outside the pill) -->
+    <div class="sidebar-corner-logo" onclick="showSection('movies')" title="PopcornLog">
+      <img src="logo.svg" alt="PopcornLog" style="width:36px;height:36px;">
+    </div>
+
     <!-- SIDEBAR -->
     <nav class="sidebar">
-      <div class="sidebar-logo" onclick="showSection('movies')">
-        <img src="logo.svg" alt="PopcornLog" style="width:34px;height:34px;">
-      </div>
-
       <button onclick="showSection('movies')" id="moviesBtn" class="sidebar-btn active" title="My Movies">🎬<span class="sidebar-tooltip">My Movies</span></button>
       <button onclick="showSection('watchlist')" id="watchlistBtn" class="sidebar-btn" title="Watch Later">📋<span class="sidebar-tooltip">Watch Later</span></button>
       <button onclick="showSection('toprated')" id="topratedBtn" class="sidebar-btn" title="Top Rated">⭐<span class="sidebar-tooltip">Top Rated</span></button>
