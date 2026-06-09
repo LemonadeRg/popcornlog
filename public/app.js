@@ -217,12 +217,14 @@ function showSection(section) {
   document.getElementById('recommendedSection').style.display = 'none';
   document.getElementById('quizSection').style.display = 'none';
   document.getElementById('profileSection').style.display = 'none';
+  document.getElementById('friendsSection').style.display = 'none';
   document.getElementById('quizBtn').classList.remove('active');
   document.getElementById('profileBtn').classList.remove('active');
   document.getElementById('moviesBtn').classList.remove('active');
   document.getElementById('watchlistBtn').classList.remove('active');
   document.getElementById('topratedBtn').classList.remove('active');
   document.getElementById('recommendedBtn').classList.remove('active');
+  document.getElementById('friendsBtn').classList.remove('active');
 
   if (section === 'movies') {
     document.getElementById('moviesSection').style.display = 'block';
@@ -252,6 +254,11 @@ function showSection(section) {
     document.getElementById('topratedSection').style.display = 'block';
     document.getElementById('topratedBtn').classList.add('active');
     displayMovies(allMovies.filter(m => m.rating === 5), 'topratedContainer');
+  } else if (section === 'friends') {
+    document.getElementById('friendsSection').style.display = 'block';
+    document.getElementById('friendsBtn').classList.add('active');
+    loadFriends();
+    loadPendingRequests();
   }
 }
 
@@ -1006,3 +1013,200 @@ async function addRecommendedToWatchlist(title) {
     showAlert('❌ Error adding to watchlist');
   }
 }
+// ===== FRIENDS =====
+let userSearchTimeout;
+
+async function searchUsers() {
+  const q = document.getElementById('friendSearchInput').value.trim();
+  const container = document.getElementById('userSearchResults');
+  clearTimeout(userSearchTimeout);
+
+  if (q.length < 2) { container.innerHTML = ''; return; }
+
+  userSearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+      const users = await res.json();
+
+      if (users.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); font-size:0.9em;">No users found</p>`;
+        return;
+      }
+
+      container.innerHTML = users.map(u => {
+        let btn = '';
+        if (u.friendStatus === 'accepted') {
+          btn = `<span style="color:var(--green); font-size:0.85em; font-weight:700;">✅ Friends</span>`;
+        } else if (u.friendStatus === 'pending' && u.direction === 'sent') {
+          btn = `<span style="color:var(--text-muted); font-size:0.85em;">Requested</span>`;
+        } else if (u.friendStatus === 'pending' && u.direction === 'received') {
+          btn = `<span style="color:var(--text-muted); font-size:0.85em;">Sent you a request</span>`;
+        } else {
+          btn = `<button onclick="sendFriendRequest(${u.id}, this)"
+            style="padding:6px 16px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit;">
+            + Add Friend</button>`;
+        }
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-size:1.8em;">${u.avatar || '🎬'}</span>
+              <span style="color:var(--text); font-weight:600;">${u.username}</span>
+            </div>
+            ${btn}
+          </div>`;
+      }).join('');
+    } catch (e) {
+      container.innerHTML = `<p style="color:var(--red);">Search failed</p>`;
+    }
+  }, 300);
+}
+
+async function sendFriendRequest(userId, btn) {
+  try {
+    const res = await fetch(`/api/friends/request/${userId}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      btn.outerHTML = `<span style="color:var(--text-muted); font-size:0.85em;">Requested</span>`;
+    } else {
+      showAlert('❌ ' + data.error);
+    }
+  } catch (e) {
+    showAlert('❌ Failed to send request');
+  }
+}
+
+async function loadPendingRequests() {
+  try {
+    const res = await fetch('/api/friends/requests');
+    const requests = await res.json();
+    const card = document.getElementById('pendingRequestsCard');
+    const list = document.getElementById('pendingRequestsList');
+
+    if (requests.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'block';
+    list.innerHTML = requests.map(r => `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.8em;">${r.avatar || '🎬'}</span>
+          <span style="color:var(--text); font-weight:600;">${r.username}</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button onclick="respondToRequest(${r.id}, 'accept', this.closest('div').closest('div'))"
+            style="padding:6px 14px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit;">Accept</button>
+          <button onclick="respondToRequest(${r.id}, 'decline', this.closest('div').closest('div'))"
+            style="padding:6px 14px; background:transparent; color:var(--red); border:1px solid var(--red); border-radius:4px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit;">Decline</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Failed to load requests', e);
+  }
+}
+
+async function respondToRequest(requestId, action, rowEl) {
+  try {
+    await fetch(`/api/friends/request/${requestId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    rowEl.remove();
+    loadFriends();
+    loadPendingRequests();
+  } catch (e) {
+    showAlert('❌ Failed');
+  }
+}
+
+async function loadFriends() {
+  try {
+    const res = await fetch('/api/friends');
+    const friends = await res.json();
+    const list = document.getElementById('friendsList');
+
+    if (friends.length === 0) {
+      list.innerHTML = `<p style="color:var(--text-muted); font-size:0.9em; text-align:center; padding:20px 0;">No friends yet — search for someone above! 👆</p>`;
+      return;
+    }
+
+    list.innerHTML = friends.map(f => `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span style="font-size:2em;">${f.avatar || '🎬'}</span>
+          <div>
+            <div style="color:var(--text); font-weight:700;">${f.username}</div>
+            <div style="color:var(--text-muted); font-size:0.8em;">${f.movie_count} movies watched</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button onclick="viewFriendMovies(${f.id}, '${f.username}', '${f.avatar || '🎬'}')"
+            style="padding:7px 16px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.82em; font-family:inherit; transition:all 0.2s;"
+            onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">🎬 View Movies</button>
+          <button onclick="removeFriend(${f.id}, '${f.username}')"
+            style="padding:7px 14px; background:transparent; color:var(--text-muted); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:0.82em; font-family:inherit;"
+            onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Remove</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Failed to load friends', e);
+  }
+}
+
+async function viewFriendMovies(friendId, username, avatar) {
+  document.getElementById('friendMoviesTitle').textContent = `${avatar} ${username}'s Movies`;
+  const container = document.getElementById('friendMoviesContainer');
+  container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted);">Loading...</div>`;
+  document.getElementById('friendMoviesModal').classList.add('active');
+
+  try {
+    const res = await fetch(`/api/friends/${friendId}/movies`);
+    const movies = await res.json();
+
+    if (movies.length === 0) {
+      container.innerHTML = `<div class="empty-state"><h2>${username} hasn't added any movies yet</h2></div>`;
+      return;
+    }
+
+    container.innerHTML = movies.map(movie => `
+      <div class="movie-card">
+        <div class="poster-container">
+          <img src="${movie.posterUrl}" alt="${movie.title}" class="poster">
+        </div>
+        <div class="movie-info">
+          <h3>${movie.title}</h3>
+          <p class="genre">${movie.genres || ''}</p>
+          <div class="rating">
+            <span class="stars">${'⭐'.repeat(movie.rating || 0)}</span>
+            <span class="rating-number">${movie.rating || '?'}/5</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state"><h2>Failed to load movies</h2></div>`;
+  }
+}
+
+function closeFriendMovies() {
+  document.getElementById('friendMoviesModal').classList.remove('active');
+}
+
+async function removeFriend(friendId, username) {
+  showConfirm(`Remove ${username} from your friends?`, async (confirmed) => {
+    if (!confirmed) return;
+    await fetch(`/api/friends/${friendId}`, { method: 'DELETE' });
+    loadFriends();
+  });
+}
+
+window.addEventListener('click', function(event) {
+  const fm = document.getElementById('friendMoviesModal');
+  if (fm && event.target === fm) closeFriendMovies();
+});

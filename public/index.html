@@ -101,6 +101,7 @@
         <button onclick="showSection('toprated')" id="topratedBtn" class="section-btn" data-i18n="topRated">⭐ Top Rated</button>
         <button onclick="showSection('recommended')" id="recommendedBtn" class="section-btn" data-i18n="recommended">🎯 Recommended</button>
         <button onclick="showSection('quiz')" id="quizBtn" class="section-btn">🎬 Quiz</button>
+        <button onclick="showSection('friends')" id="friendsBtn" class="section-btn">👥 Friends</button>
       </div>
 
       <div id="moviesSection">
@@ -179,6 +180,50 @@
             <h3 style="color:#e84040; font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Danger Zone</h3>
             <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:16px;">Permanently delete your account and all your movies. This cannot be undone.</p>
             <button onclick="deleteAccount()" style="padding:9px 24px; background:transparent; color:#e84040; border:1px solid #e84040; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Delete Account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FRIENDS SECTION -->
+      <div id="friendsSection" style="display:none;">
+        <div style="max-width:700px; margin:0 auto;">
+          <h2 style="color:var(--text); margin-bottom:6px; font-size:1.6em; letter-spacing:2px; text-align:center;">👥 Friends</h2>
+          <p style="color:var(--text-dim); text-align:center; margin-bottom:28px; font-size:0.9em;">Find friends and see what they're watching</p>
+
+          <!-- Search Users -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
+            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Find a Friend</h3>
+            <div style="display:flex; gap:10px;">
+              <input type="text" id="friendSearchInput" placeholder="Search by username..." autocomplete="off"
+                style="flex:1; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:10px 14px; font-family:inherit; font-size:0.95em;"
+                oninput="searchUsers()" onkeypress="if(event.key==='Enter') searchUsers()">
+            </div>
+            <div id="userSearchResults" style="margin-top:12px;"></div>
+          </div>
+
+          <!-- Pending Requests -->
+          <div id="pendingRequestsCard" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px; display:none;">
+            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">📬 Friend Requests</h3>
+            <div id="pendingRequestsList"></div>
+          </div>
+
+          <!-- Friends List -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px;">
+            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">My Friends</h3>
+            <div id="friendsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FRIEND MOVIES MODAL -->
+      <div class="modal" id="friendMoviesModal">
+        <div class="modal-content" style="max-width:860px;">
+          <div class="modal-header">
+            <h2 class="modal-title" id="friendMoviesTitle">Friend's Movies</h2>
+            <button class="close-btn" onclick="closeFriendMovies()">&times;</button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <div class="movies-grid" id="friendMoviesContainer"></div>
           </div>
         </div>
       </div>

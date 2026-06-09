@@ -558,6 +558,157 @@ app.get('/api/recommendations', requireAuth, async (req, res) => {
   }
 });
 
+// ===== FRIENDS =====
+
+// Create friends table on init (added to initDB)
+async function initFriendsTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS friend_requests (
+      id SERIAL PRIMARY KEY,
+      from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      to_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(from_user_id, to_user_id)
+    )
+  `);
+}
+initFriendsTable().catch(err => console.error('Friends table error:', err));
+
+// Search users by username
+app.get('/api/users/search', requireAuth, async (req, res) => {
+  const q = req.query.q || '';
+  if (q.length < 2) return res.json([]);
+  try {
+    const result = await db.query(
+      `SELECT id, username, avatar FROM users
+       WHERE username ILIKE $1 AND id != $2 LIMIT 10`,
+      [`%${q}%`, req.session.userId]
+    );
+    // Also get friendship status for each result
+    const users = await Promise.all(result.rows.map(async (u) => {
+      const fr = await db.query(
+        `SELECT status, from_user_id FROM friend_requests
+         WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)`,
+        [req.session.userId, u.id]
+      );
+      let status = 'none';
+      let direction = null;
+      if (fr.rows.length > 0) {
+        status = fr.rows[0].status;
+        direction = fr.rows[0].from_user_id === req.session.userId ? 'sent' : 'received';
+      }
+      return { ...u, friendStatus: status, direction };
+    }));
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send friend request
+app.post('/api/friends/request/:userId', requireAuth, async (req, res) => {
+  const toId = parseInt(req.params.userId);
+  if (toId === req.session.userId) return res.status(400).json({ error: 'Cannot add yourself' });
+  try {
+    await db.query(
+      'INSERT INTO friend_requests (from_user_id, to_user_id) VALUES ($1, $2)',
+      [req.session.userId, toId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Request already sent' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get pending requests (received)
+app.get('/api/friends/requests', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT fr.id, u.username, u.avatar, u.id as from_id
+       FROM friend_requests fr
+       JOIN users u ON u.id = fr.from_user_id
+       WHERE fr.to_user_id = $1 AND fr.status = 'pending'`,
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Accept/decline request
+app.put('/api/friends/request/:id', requireAuth, async (req, res) => {
+  const { action } = req.body; // 'accept' or 'decline'
+  try {
+    await db.query(
+      `UPDATE friend_requests SET status = $1 WHERE id = $2 AND to_user_id = $3`,
+      [action === 'accept' ? 'accepted' : 'declined', req.params.id, req.session.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get friends list
+app.get('/api/friends', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT u.id, u.username, u.avatar,
+        (SELECT COUNT(*) FROM movies WHERE user_id = u.id) as movie_count
+       FROM friend_requests fr
+       JOIN users u ON (
+         CASE WHEN fr.from_user_id = $1 THEN u.id = fr.to_user_id
+              ELSE u.id = fr.from_user_id END
+       )
+       WHERE (fr.from_user_id = $1 OR fr.to_user_id = $1) AND fr.status = 'accepted'`,
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove friend
+app.delete('/api/friends/:userId', requireAuth, async (req, res) => {
+  try {
+    await db.query(
+      `DELETE FROM friend_requests
+       WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)`,
+      [req.session.userId, req.params.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// View a friend's movies
+app.get('/api/friends/:userId/movies', requireAuth, async (req, res) => {
+  const friendId = parseInt(req.params.userId);
+  try {
+    // Verify they are actually friends
+    const check = await db.query(
+      `SELECT id FROM friend_requests
+       WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)
+       AND status='accepted'`,
+      [req.session.userId, friendId]
+    );
+    if (check.rows.length === 0) return res.status(403).json({ error: 'Not friends' });
+
+    const result = await db.query(
+      'SELECT * FROM movies WHERE user_id = $1 ORDER BY created_at DESC',
+      [friendId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
