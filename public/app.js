@@ -225,6 +225,7 @@ function showSection(section) {
   document.getElementById('quizSection').style.display = 'none';
   document.getElementById('profileSection').style.display = 'none';
   document.getElementById('friendsSection').style.display = 'none';
+  document.getElementById('chatSection').style.display = 'none';
   document.getElementById('quizBtn').classList.remove('active');
   document.getElementById('profileBtn').classList.remove('active');
   document.getElementById('moviesBtn').classList.remove('active');
@@ -232,6 +233,8 @@ function showSection(section) {
   document.getElementById('topratedBtn').classList.remove('active');
   document.getElementById('recommendedBtn').classList.remove('active');
   document.getElementById('friendsBtn').classList.remove('active');
+  document.getElementById('chatBtn').classList.remove('active');
+  stopChatPolling();
 
   if (section === 'movies') {
     document.getElementById('moviesSection').style.display = 'block';
@@ -266,6 +269,10 @@ function showSection(section) {
     document.getElementById('friendsBtn').classList.add('active');
     loadFriends();
     loadPendingRequests();
+  } else if (section === 'chat') {
+    document.getElementById('chatSection').style.display = 'block';
+    document.getElementById('chatBtn').classList.add('active');
+    initChat();
   }
 }
 
@@ -1217,3 +1224,105 @@ window.addEventListener('click', function(event) {
   const fm = document.getElementById('friendMoviesModal');
   if (fm && event.target === fm) closeFriendMovies();
 });
+
+// ===== CHAT =====
+let chatLastId = 0;
+let chatPollInterval = null;
+let chatMyUserId = null;
+
+async function initChat() {
+  chatMyUserId = currentUserId;
+  const container = document.getElementById('chatMessages');
+  container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Loading messages...</div>`;
+
+  try {
+    const res = await fetch('/api/chat');
+    const messages = await res.json();
+    container.innerHTML = '';
+    messages.forEach(m => appendChatMessage(m, false));
+    if (messages.length > 0) chatLastId = messages[messages.length - 1].id;
+    scrollChatToBottom();
+  } catch (e) {
+    container.innerHTML = `<div style="text-align:center; color:var(--red);">Failed to load chat</div>`;
+  }
+
+  // Poll for new messages every 3 seconds
+  chatPollInterval = setInterval(pollChat, 3000);
+}
+
+async function pollChat() {
+  try {
+    const res = await fetch(`/api/chat/since/${chatLastId}`);
+    const messages = await res.json();
+    if (messages.length > 0) {
+      messages.forEach(m => appendChatMessage(m, true));
+      chatLastId = messages[messages.length - 1].id;
+    }
+  } catch (e) {}
+}
+
+function stopChatPolling() {
+  if (chatPollInterval) {
+    clearInterval(chatPollInterval);
+    chatPollInterval = null;
+  }
+}
+
+function appendChatMessage(msg, scroll) {
+  const container = document.getElementById('chatMessages');
+  const isMe = parseInt(msg.user_id) === parseInt(chatMyUserId);
+  const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'};`;
+  div.innerHTML = `
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; ${isMe ? 'flex-direction:row-reverse;' : ''}">
+      <span style="font-size:1.3em;">${msg.avatar || '🎬'}</span>
+      <span style="color:var(--text-muted); font-size:0.75em; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${isMe ? 'You' : msg.username}</span>
+      <span style="color:var(--text-muted); font-size:0.7em;">${time}</span>
+    </div>
+    <div style="
+      max-width:75%;
+      padding:10px 14px;
+      border-radius:${isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
+      background:${isMe ? 'var(--green)' : 'var(--surface2)'};
+      color:${isMe ? '#000' : 'var(--text)'};
+      font-size:0.95em;
+      line-height:1.5;
+      word-break:break-word;
+    ">${escapeHtml(msg.message)}</div>
+  `;
+  container.appendChild(div);
+  if (scroll) scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  const c = document.getElementById('chatMessages');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const msg = await res.json();
+    if (res.ok) {
+      appendChatMessage(msg, true);
+      chatLastId = msg.id;
+    }
+  } catch (e) {
+    showAlert('❌ Failed to send message');
+  }
+}

@@ -558,6 +558,67 @@ app.get('/api/recommendations', requireAuth, async (req, res) => {
   }
 });
 
+// ===== CHAT =====
+async function initChatTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username TEXT NOT NULL,
+      avatar TEXT DEFAULT '🎬',
+      message TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+initChatTable().catch(err => console.error('Chat table error:', err));
+
+// Get last 60 messages
+app.get('/api/chat', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, user_id, username, avatar, message, created_at
+       FROM chat_messages ORDER BY created_at DESC LIMIT 60`
+    );
+    res.json(result.rows.reverse());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get only messages newer than a given id (for polling)
+app.get('/api/chat/since/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, user_id, username, avatar, message, created_at
+       FROM chat_messages WHERE id > $1 ORDER BY created_at ASC`,
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send a message
+app.post('/api/chat', requireAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Empty message' });
+  if (message.length > 500) return res.status(400).json({ error: 'Message too long' });
+
+  try {
+    const userResult = await db.query('SELECT username, avatar FROM users WHERE id=$1', [req.session.userId]);
+    const user = userResult.rows[0];
+    const result = await db.query(
+      'INSERT INTO chat_messages (user_id, username, avatar, message) VALUES ($1,$2,$3,$4) RETURNING *',
+      [req.session.userId, user.username, user.avatar || '🎬', message.trim()]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ===== FRIENDS =====
 
 // Create friends table on init (added to initDB)
