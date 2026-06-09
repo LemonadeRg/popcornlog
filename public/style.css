@@ -986,11 +986,16 @@ h1 {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
+    overflow-y: visible !important;
     gap: 8px !important;
     justify-content: flex-start !important;
-    padding-bottom: 4px;
+    padding-bottom: 8px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    touch-action: pan-x;
   }
 
   .nav-tabs::-webkit-scrollbar {
@@ -998,10 +1003,11 @@ h1 {
   }
 
   .section-btn {
-    white-space: nowrap;
-    flex-shrink: 0;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
     font-size: 0.78em !important;
     padding: 7px 12px !important;
+    scroll-snap-align: start;
   }
 
   /* Add movie row: stack vertically */
