@@ -81,29 +81,34 @@ h1 {
 
 /* ===== SIDEBAR ===== */
 .sidebar {
-  width: 64px;
-  min-width: 64px;
+  position: fixed;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 54px;
   background: var(--surface);
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 0 14px;
+  padding: 10px 0 10px;
   gap: 2px;
   z-index: 200;
   overflow: visible;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 
 .sidebar-logo {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   background: var(--surface2);
   cursor: pointer;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   transition: background 0.15s;
 }
 
@@ -157,7 +162,7 @@ h1 {
 /* Tooltip */
 .sidebar-tooltip {
   position: absolute;
-  left: 54px;
+  left: 50px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--surface2);
@@ -211,6 +216,7 @@ h1 {
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  margin-left: 74px;
 }
 
 .app-topbar {
@@ -1119,23 +1125,24 @@ h1 {
   }
 
   /* On mobile: sidebar becomes a bottom navigation bar */
-  #appPage {
-    flex-direction: column;
-  }
-
   .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    transform: none;
     width: 100%;
     height: 58px;
-    min-width: unset;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--border);
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
     padding: 0 8px;
     gap: 0;
-    order: 2; /* sits below content */
-    border-right: none;
-    border-top: 1px solid var(--border);
-    overflow: hidden;
+    box-shadow: none;
   }
 
   .sidebar-logo,
@@ -1165,9 +1172,8 @@ h1 {
   }
 
   .app-main {
-    order: 1;
-    flex: 1;
-    overflow: hidden;
+    margin-left: 0;
+    padding-bottom: 58px;
   }
 
   .app-topbar {
