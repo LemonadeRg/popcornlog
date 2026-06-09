@@ -238,7 +238,6 @@
       <!-- CHAT SECTION -->
       <div id="chatSection" style="display:none;">
         <div style="max-width:680px; margin:0 auto;">
-          <h2 style="color:var(--text); margin-bottom:6px; font-size:1.6em; letter-spacing:2px; text-align:center;">💬 Group Chat</h2>
           <p style="color:var(--text-dim); text-align:center; margin-bottom:20px; font-size:0.9em;">Everyone on PopcornLog can chat here</p>
 
           <!-- Messages Box -->
@@ -305,7 +304,6 @@
       <!-- FRIENDS SECTION -->
       <div id="friendsSection" style="display:none;">
         <div style="max-width:700px; margin:0 auto;">
-          <h2 style="color:var(--text); margin-bottom:6px; font-size:1.6em; letter-spacing:2px; text-align:center;">👥 Friends</h2>
           <p style="color:var(--text-dim); text-align:center; margin-bottom:28px; font-size:0.9em;">Find friends and see what they're watching</p>
 
           <!-- Search Users -->
@@ -409,8 +407,6 @@
 
       <div id="quizSection" style="display:none;">
         <div style="max-width:650px; margin:0 auto; text-align:center;">
-          <h2 style="color:var(--text); margin-bottom:6px; font-size:1.6em; letter-spacing:2px;">🎬 Movie Quiz</h2>
-          <p style="color:var(--text-dim); margin-bottom:30px; font-size:0.9em;">Guess the movie from the plot summary</p>
 
           <div id="quizScore" style="display:flex; justify-content:center; gap:30px; margin-bottom:30px;">
             <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 28px;">
@@ -423,9 +419,9 @@
             </div>
           </div>
 
-          <div id="quizCard" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; margin-bottom:20px;">
+          <div id="quizCard" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; margin-bottom:20px; overflow:hidden;">
             <p style="color:var(--text-dim); font-size:0.85em; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">What movie has this plot?</p>
-            <p id="quizPlot" style="color:var(--text); font-size:1.05em; line-height:1.8; margin-bottom:30px; font-style:italic;"></p>
+            <p id="quizPlot" style="color:var(--text); font-size:1.05em; line-height:1.8; margin-bottom:30px; font-style:italic; word-wrap:break-word; overflow-wrap:break-word;"></p>
             <div id="quizOptions" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
             <div id="quizFeedback" style="margin-top:24px; font-size:1.1em; font-weight:700; min-height:30px;"></div>
           </div>
