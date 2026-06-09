@@ -149,14 +149,20 @@ app.post('/auth/signup', async (req, res) => {
       [username, email, hashedPassword, code, expires]
     );
 
-    await sendVerificationEmail(email, code);
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (emailErr) {
+      console.error('Email send failed:', emailErr.message);
+      return res.status(500).json({ error: 'Could not send verification email. Check EMAIL_USER and EMAIL_PASS settings.' });
+    }
+
     res.json({ success: true, needsVerification: true, email });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'Email or username already exists' });
     }
     console.error('Signup error:', err);
-    res.status(500).json({ error: 'Signup failed' });
+    res.status(500).json({ error: 'Signup failed: ' + err.message });
   }
 });
 
