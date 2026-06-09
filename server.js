@@ -1,10 +1,10 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
@@ -24,74 +24,68 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 hours
 }));
 
-// Initialize SQLite Database
-const db = new sqlite3.Database('./movies.db', (err) => {
-  if (err) console.error('Database error:', err);
-  else console.log('✅ Connected to SQLite database');
+// PostgreSQL connection
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Create Users Table
-db.run(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    bio TEXT DEFAULT '',
-    avatar TEXT DEFAULT '🎬',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+// Initialize tables
+async function initDB() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      bio TEXT DEFAULT '',
+      avatar TEXT DEFAULT '🎬',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-// Add bio/avatar columns for existing databases (ignore error if already exists)
-db.run(`ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''`, () => {});
-db.run(`ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT '🎬'`, () => {});
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS movies (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      genres TEXT,
+      director TEXT,
+      "mainCharacter" TEXT,
+      year INTEGER,
+      "imdbRating" REAL,
+      runtime TEXT,
+      "posterUrl" TEXT,
+      plot TEXT,
+      rating INTEGER,
+      "userNotes" TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, title)
+    )
+  `);
 
-// Create Movies Table (with user_id)
-db.run(`
-  CREATE TABLE IF NOT EXISTS movies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    genres TEXT,
-    director TEXT,
-    mainCharacter TEXT,
-    year INTEGER,
-    imdbRating REAL,
-    runtime TEXT,
-    posterUrl TEXT,
-    plot TEXT,
-    rating INTEGER,
-    userNotes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(user_id, title)
-  )
-`, () => {
-  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_movies_user_title ON movies(user_id, title)`);
-});
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS watchlist (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      genres TEXT,
+      director TEXT,
+      "mainCharacter" TEXT,
+      year INTEGER,
+      "imdbRating" REAL,
+      runtime TEXT,
+      "posterUrl" TEXT,
+      plot TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, title)
+    )
+  `);
 
-// Create Watchlist Table (with user_id)
-db.run(`
-  CREATE TABLE IF NOT EXISTS watchlist (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    genres TEXT,
-    director TEXT,
-    mainCharacter TEXT,
-    year INTEGER,
-    imdbRating REAL,
-    runtime TEXT,
-    posterUrl TEXT,
-    plot TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(user_id, title)
-  )
-`, () => {
-  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_user_title ON watchlist(user_id, title)`);
-});
+  console.log('✅ Database tables ready');
+}
+
+initDB().catch(err => console.error('DB init error:', err));
 
 // ===== AUTHENTICATION ROUTES =====
 
@@ -113,70 +107,50 @@ app.post('/auth/signup', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    db.run(
-      'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-      [username, email, hashedPassword],
-      function(err) {
-        if (err) {
-          if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: 'Email or username already exists' });
-          }
-          return res.status(500).json({ error: 'Signup failed' });
-        }
-
-        req.session.userId = this.lastID;
-        req.session.username = username;
-        res.json({ success: true, message: 'Account created!' });
-      }
+    const result = await db.query(
+      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id',
+      [username, email, hashedPassword]
     );
-  } catch (error) {
-    res.status(500).json({ error: 'Signup error' });
+    req.session.userId = result.rows[0].id;
+    req.session.username = username;
+    res.json({ success: true, message: 'Account created!' });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'Email or username already exists' });
+    }
+    res.status(500).json({ error: 'Signup failed' });
   }
 });
 
 // Sign In
-app.post('/auth/signin', (req, res) => {
+app.post('/auth/signin', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
-  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-    if (err || !user) {
-      return res.status(400).json({ error: 'Invalid email or password' });
-    }
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
 
-    try {
-      const validPassword = await bcrypt.compare(password, user.password);
-      
-      if (!validPassword) {
-        return res.status(400).json({ error: 'Invalid email or password' });
-      }
+    if (!user) return res.status(400).json({ error: 'Invalid email or password' });
 
-      req.session.userId = user.id;
-req.session.username = user.username;
-res.json({ 
-  success: true, 
-  message: 'Logged in!', 
-  username: user.username,
-  userId: user.id 
-});
-    } catch (error) {
-      res.status(500).json({ error: 'Login error' });
-    }
-  });
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) return res.status(400).json({ error: 'Invalid email or password' });
+
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    res.json({ success: true, message: 'Logged in!', username: user.username, userId: user.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Login error' });
+  }
 });
 
 // Check Auth Status
 app.get('/auth/status', (req, res) => {
   if (req.session.userId) {
-    res.json({ 
-      authenticated: true, 
-      username: req.session.username,
-      userId: req.session.userId 
-    });
+    res.json({ authenticated: true, username: req.session.username, userId: req.session.userId });
   } else {
     res.json({ authenticated: false });
   }
@@ -190,27 +164,23 @@ app.post('/auth/logout', (req, res) => {
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
   next();
 };
 
 // ===== MOVIES ROUTES =====
 
 // Get all movies for user
-app.get('/api/movies', requireAuth, (req, res) => {
-  db.all(
-    'SELECT * FROM movies WHERE user_id = ? ORDER BY created_at DESC',
-    [req.session.userId],
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json(rows || []);
-      }
-    }
-  );
+app.get('/api/movies', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM movies WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Add movie
@@ -218,7 +188,7 @@ app.post('/api/movies', requireAuth, async (req, res) => {
   const { movieName, rating, notes } = req.body;
 
   try {
-    const response = await axios.get(`http://www.omdbapi.com/`, {
+    const response = await axios.get('http://www.omdbapi.com/', {
       params: { apikey: OMDB_API_KEY, t: movieName, type: 'movie' }
     });
 
@@ -227,90 +197,58 @@ app.post('/api/movies', requireAuth, async (req, res) => {
     }
 
     const movie = response.data;
-    db.run(
-      `INSERT INTO movies 
-       (user_id, title, genres, director, mainCharacter, year, imdbRating, runtime, posterUrl, plot, rating, userNotes) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        req.session.userId,
-        movie.Title,
-        movie.Genre,
-        movie.Director,
-        movie.Actors,
-        movie.Year,
-        movie.imdbRating,
-        movie.Runtime,
-        movie.Poster,
-        movie.Plot,
-        rating,
-        notes
-      ],
-      (err) => {
-        if (err) {
-          if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: 'You already have this movie in your list' });
-          }
-          res.status(500).json({ error: err.message });
-        } else {
-          res.json({ success: true });
-        }
-      }
+    await db.query(
+      `INSERT INTO movies (user_id, title, genres, director, "mainCharacter", year, "imdbRating", runtime, "posterUrl", plot, rating, "userNotes")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [req.session.userId, movie.Title, movie.Genre, movie.Director, movie.Actors,
+       movie.Year, movie.imdbRating, movie.Runtime, movie.Poster, movie.Plot, rating, notes]
     );
-  } catch (error) {
+    res.json({ success: true });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'You already have this movie in your list' });
+    }
     res.status(500).json({ error: 'Failed to add movie' });
   }
 });
 
 // Update movie
-app.put('/api/movies/:id', requireAuth, (req, res) => {
+app.put('/api/movies/:id', requireAuth, async (req, res) => {
   const { rating, userNotes } = req.body;
-  const movieId = req.params.id;
-
-  db.run(
-    'UPDATE movies SET rating = ?, userNotes = ? WHERE id = ? AND user_id = ?',
-    [rating, userNotes, movieId, req.session.userId],
-    (err) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json({ success: true });
-      }
-    }
-  );
+  try {
+    await db.query(
+      'UPDATE movies SET rating = $1, "userNotes" = $2 WHERE id = $3 AND user_id = $4',
+      [rating, userNotes, req.params.id, req.session.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete movie
-app.delete('/api/movies/:id', requireAuth, (req, res) => {
-  const movieId = req.params.id;
-
-  db.run(
-    'DELETE FROM movies WHERE id = ? AND user_id = ?',
-    [movieId, req.session.userId],
-    (err) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json({ success: true });
-      }
-    }
-  );
+app.delete('/api/movies/:id', requireAuth, async (req, res) => {
+  try {
+    await db.query('DELETE FROM movies WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ===== WATCHLIST ROUTES =====
 
 // Get watchlist
-app.get('/api/watchlist', requireAuth, (req, res) => {
-  db.all(
-    'SELECT * FROM watchlist WHERE user_id = ? ORDER BY created_at DESC',
-    [req.session.userId],
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json(rows || []);
-      }
-    }
-  );
+app.get('/api/watchlist', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM watchlist WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Add to watchlist
@@ -318,7 +256,7 @@ app.post('/api/watchlist', requireAuth, async (req, res) => {
   const { movieName } = req.body;
 
   try {
-    const response = await axios.get(`http://www.omdbapi.com/`, {
+    const response = await axios.get('http://www.omdbapi.com/', {
       params: { apikey: OMDB_API_KEY, t: movieName, type: 'movie' }
     });
 
@@ -327,131 +265,75 @@ app.post('/api/watchlist', requireAuth, async (req, res) => {
     }
 
     const movie = response.data;
-    db.run(
-      `INSERT INTO watchlist 
-       (user_id, title, genres, director, mainCharacter, year, imdbRating, runtime, posterUrl, plot) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        req.session.userId,
-        movie.Title,
-        movie.Genre,
-        movie.Director,
-        movie.Actors,
-        movie.Year,
-        movie.imdbRating,
-        movie.Runtime,
-        movie.Poster,
-        movie.Plot
-      ],
-      (err) => {
-        if (err) {
-          if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: 'This movie is already in your watchlist' });
-          }
-          res.status(500).json({ error: err.message });
-        } else {
-          res.json({ success: true });
-        }
-      }
+    await db.query(
+      `INSERT INTO watchlist (user_id, title, genres, director, "mainCharacter", year, "imdbRating", runtime, "posterUrl", plot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [req.session.userId, movie.Title, movie.Genre, movie.Director, movie.Actors,
+       movie.Year, movie.imdbRating, movie.Runtime, movie.Poster, movie.Plot]
     );
-  } catch (error) {
+    res.json({ success: true });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'This movie is already in your watchlist' });
+    }
     res.status(500).json({ error: 'Failed to add to watchlist' });
   }
 });
 
 // Remove from watchlist
-app.delete('/api/watchlist/:id', requireAuth, (req, res) => {
-  const watchlistId = req.params.id;
-
-  db.run(
-    'DELETE FROM watchlist WHERE id = ? AND user_id = ?',
-    [watchlistId, req.session.userId],
-    (err) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json({ success: true });
-      }
-    }
-  );
+app.delete('/api/watchlist/:id', requireAuth, async (req, res) => {
+  try {
+    await db.query('DELETE FROM watchlist WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Move from watchlist to movies
 app.post('/api/watchlist-to-movies/:id', requireAuth, async (req, res) => {
   const { rating, notes } = req.body;
-  const watchlistId = req.params.id;
 
-  db.get(
-    'SELECT * FROM watchlist WHERE id = ? AND user_id = ?',
-    [watchlistId, req.session.userId],
-    (err, watchlistMovie) => {
-      if (err || !watchlistMovie) {
-        return res.status(500).json({ error: 'Movie not found' });
-      }
+  try {
+    const result = await db.query(
+      'SELECT * FROM watchlist WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.session.userId]
+    );
+    const w = result.rows[0];
+    if (!w) return res.status(404).json({ error: 'Movie not found' });
 
-      db.run(
-        `INSERT INTO movies 
-         (user_id, title, genres, director, mainCharacter, year, imdbRating, runtime, posterUrl, plot, rating, userNotes) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          req.session.userId,
-          watchlistMovie.title,
-          watchlistMovie.genres,
-          watchlistMovie.director,
-          watchlistMovie.mainCharacter,
-          watchlistMovie.year,
-          watchlistMovie.imdbRating,
-          watchlistMovie.runtime,
-          watchlistMovie.posterUrl,
-          watchlistMovie.plot,
-          rating,
-          notes
-        ],
-        (err) => {
-          if (err) {
-            return res.status(500).json({ error: err.message });
-          }
+    await db.query(
+      `INSERT INTO movies (user_id, title, genres, director, "mainCharacter", year, "imdbRating", runtime, "posterUrl", plot, rating, "userNotes")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [req.session.userId, w.title, w.genres, w.director, w.mainCharacter,
+       w.year, w.imdbRating, w.runtime, w.posterUrl, w.plot, rating, notes]
+    );
 
-          db.run(
-            'DELETE FROM watchlist WHERE id = ? AND user_id = ?',
-            [watchlistId, req.session.userId],
-            (err) => {
-              if (err) {
-                res.status(500).json({ error: err.message });
-              } else {
-                res.json({ success: true });
-              }
-            }
-          );
-        }
-      );
-    }
-  );
+    await db.query('DELETE FROM watchlist WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ===== SEARCH & TRAILER =====
 
 // Search movies
 app.get('/api/search/:query', requireAuth, async (req, res) => {
-  const query = req.params.query;
-
   try {
-    const response = await axios.get(`http://www.omdbapi.com/`, {
-      params: { apikey: OMDB_API_KEY, s: query, type: 'movie' }
+    const response = await axios.get('http://www.omdbapi.com/', {
+      params: { apikey: OMDB_API_KEY, s: req.params.query, type: 'movie' }
     });
 
-    if (response.data.Response === 'False') {
-      return res.json({ results: [] });
-    }
+    if (response.data.Response === 'False') return res.json({ results: [] });
 
     const results = response.data.Search.slice(0, 5).map(movie => ({
       title: movie.Title,
       year: movie.Year,
       poster: movie.Poster
     }));
-
     res.json({ results });
-  } catch (error) {
+  } catch (err) {
     res.status(500).json({ error: 'Search failed' });
   }
 });
@@ -461,19 +343,17 @@ app.get('/api/trailer/:movieTitle', requireAuth, async (req, res) => {
   try {
     const search = require('yt-search');
     const results = await search(`${req.params.movieTitle} trailer`);
-
     if (results.videos.length > 0) {
-      const videoId = results.videos[0].videoId;
-      res.json({ videoId });
+      res.json({ videoId: results.videos[0].videoId });
     } else {
       res.json({ videoId: null });
     }
-  } catch (error) {
+  } catch (err) {
     res.json({ videoId: null });
   }
 });
 
-// IMDb Top 250 movie IDs (hardcoded for reliable recommendations)
+// IMDb Top 250 movie IDs
 const IMDB_TOP_250 = [
   'tt0111161','tt0068646','tt0071562','tt0468569','tt0050083','tt0108052',
   'tt0167260','tt0110912','tt0060196','tt0120737','tt0137523','tt0109830',
@@ -496,34 +376,51 @@ const IMDB_TOP_250 = [
 // ===== PROFILE =====
 
 // Get profile + stats
-app.get('/api/profile', requireAuth, (req, res) => {
-  db.get('SELECT id, username, email, bio, avatar, created_at FROM users WHERE id = ?', [req.session.userId], (err, user) => {
-    if (err || !user) return res.status(500).json({ error: 'User not found' });
+app.get('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const userResult = await db.query(
+      'SELECT id, username, email, bio, avatar, created_at FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    const user = userResult.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    db.get('SELECT COUNT(*) as total, AVG(rating) as avgRating FROM movies WHERE user_id = ?', [req.session.userId], (err, stats) => {
-      db.get('SELECT COUNT(*) as watchlistCount FROM watchlist WHERE user_id = ?', [req.session.userId], (err2, wl) => {
-        res.json({
-          username: user.username,
-          email: user.email,
-          bio: user.bio || '',
-          avatar: user.avatar || '🎬',
-          joinDate: user.created_at,
-          totalMovies: stats.total || 0,
-          avgRating: stats.avgRating ? parseFloat(stats.avgRating).toFixed(1) : 'N/A',
-          watchlistCount: wl.watchlistCount || 0
-        });
-      });
+    const statsResult = await db.query(
+      'SELECT COUNT(*) as total, AVG(rating) as "avgRating" FROM movies WHERE user_id = $1',
+      [req.session.userId]
+    );
+    const wlResult = await db.query(
+      'SELECT COUNT(*) as "watchlistCount" FROM watchlist WHERE user_id = $1',
+      [req.session.userId]
+    );
+
+    const stats = statsResult.rows[0];
+    const wl = wlResult.rows[0];
+
+    res.json({
+      username: user.username,
+      email: user.email,
+      bio: user.bio || '',
+      avatar: user.avatar || '🎬',
+      joinDate: user.created_at,
+      totalMovies: parseInt(stats.total) || 0,
+      avgRating: stats.avgRating ? parseFloat(stats.avgRating).toFixed(1) : 'N/A',
+      watchlistCount: parseInt(wl.watchlistCount) || 0
     });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Update bio and avatar
-app.put('/api/profile', requireAuth, (req, res) => {
+app.put('/api/profile', requireAuth, async (req, res) => {
   const { bio, avatar } = req.body;
-  db.run('UPDATE users SET bio = ?, avatar = ? WHERE id = ?', [bio, avatar, req.session.userId], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    await db.query('UPDATE users SET bio = $1, avatar = $2 WHERE id = $3', [bio, avatar, req.session.userId]);
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Change password
@@ -533,153 +430,136 @@ app.put('/api/profile/password', requireAuth, async (req, res) => {
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'All fields required' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
 
-  db.get('SELECT password FROM users WHERE id = ?', [req.session.userId], async (err, user) => {
-    if (err || !user) return res.status(500).json({ error: 'User not found' });
+  try {
+    const result = await db.query('SELECT password FROM users WHERE id = $1', [req.session.userId]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     const valid = await bcrypt.compare(currentPassword, user.password);
     if (!valid) return res.status(400).json({ error: 'Current password is incorrect' });
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    db.run('UPDATE users SET password = ? WHERE id = ?', [hashed, req.session.userId], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true });
-    });
-  });
+    await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete account
 app.delete('/api/profile', requireAuth, async (req, res) => {
   const { password } = req.body;
 
-  db.get('SELECT password FROM users WHERE id = ?', [req.session.userId], async (err, user) => {
-    if (err || !user) return res.status(500).json({ error: 'User not found' });
+  try {
+    const result = await db.query('SELECT password FROM users WHERE id = $1', [req.session.userId]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ error: 'Incorrect password' });
 
-    db.run('DELETE FROM users WHERE id = ?', [req.session.userId], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      req.session.destroy();
-      res.json({ success: true });
-    });
-  });
+    await db.query('DELETE FROM users WHERE id = $1', [req.session.userId]);
+    req.session.destroy();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ===== QUIZ =====
-app.get('/api/quiz', requireAuth, (req, res) => {
+app.get('/api/quiz', requireAuth, async (req, res) => {
   let exclude = [];
   try {
     if (req.query.exclude) exclude = JSON.parse(req.query.exclude);
   } catch (e) {}
 
-  db.all(
-    'SELECT id, title, plot, posterUrl FROM movies WHERE user_id = ? AND plot IS NOT NULL AND plot != ""',
-    [req.session.userId],
-    (err, movies) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (movies.length < 4) return res.status(400).json({ error: 'Add at least 4 movies to play the quiz!' });
+  try {
+    const result = await db.query(
+      'SELECT id, title, plot, "posterUrl" FROM movies WHERE user_id = $1 AND plot IS NOT NULL AND plot != \'\'',
+      [req.session.userId]
+    );
+    const movies = result.rows;
 
-      // Filter out already used movies
-      let available = movies.filter(m => !exclude.includes(m.title));
+    if (movies.length < 4) return res.status(400).json({ error: 'Add at least 4 movies to play the quiz!' });
 
-      // If all used, reset
-      let reset = false;
-      if (available.length === 0) {
-        available = movies;
-        reset = true;
-      }
-
-      // Pick a random correct answer from unused
-      const correct = available[Math.floor(Math.random() * available.length)];
-
-      // Pick 3 random wrong answers from all movies
-      const others = movies.filter(m => m.id !== correct.id);
-      const wrong = others.sort(() => Math.random() - 0.5).slice(0, 3);
-
-      // Shuffle all 4 options
-      const options = [...wrong.map(m => m.title), correct.title].sort(() => Math.random() - 0.5);
-
-      res.json({
-        plot: correct.plot,
-        poster: correct.posterUrl,
-        options,
-        answer: correct.title,
-        reset
-      });
+    let available = movies.filter(m => !exclude.includes(m.title));
+    let reset = false;
+    if (available.length === 0) {
+      available = movies;
+      reset = true;
     }
-  );
+
+    const correct = available[Math.floor(Math.random() * available.length)];
+    const others = movies.filter(m => m.id !== correct.id);
+    const wrong = others.sort(() => Math.random() - 0.5).slice(0, 3);
+    const options = [...wrong.map(m => m.title), correct.title].sort(() => Math.random() - 0.5);
+
+    res.json({ plot: correct.plot, poster: correct.posterUrl, options, answer: correct.title, reset });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ===== RECOMMENDATIONS =====
 app.get('/api/recommendations', requireAuth, async (req, res) => {
-  db.all(
-    'SELECT title, genres FROM movies WHERE user_id = ?',
-    [req.session.userId],
-    async (err, allWatched) => {
-      if (err) return res.status(500).json({ error: err.message });
+  try {
+    const result = await db.query(
+      'SELECT title, genres FROM movies WHERE user_id = $1',
+      [req.session.userId]
+    );
+    const allWatched = result.rows;
+    const watchedTitles = new Set(allWatched.map(m => m.title.toLowerCase()));
 
-      const watchedTitles = new Set(allWatched.map(m => m.title.toLowerCase()));
-
-      // Find top genre from all watched movies
-      const genreCount = {};
-      allWatched.forEach(row => {
-        if (!row.genres) return;
-        row.genres.split(',').forEach(g => {
-          const genre = g.trim();
-          genreCount[genre] = (genreCount[genre] || 0) + 1;
-        });
+    const genreCount = {};
+    allWatched.forEach(row => {
+      if (!row.genres) return;
+      row.genres.split(',').forEach(g => {
+        const genre = g.trim();
+        genreCount[genre] = (genreCount[genre] || 0) + 1;
       });
+    });
 
-      if (!Object.keys(genreCount).length) {
-        return res.json({ results: [], genre: null });
-      }
+    if (!Object.keys(genreCount).length) return res.json({ results: [], genre: null });
 
-      const topGenre = Object.entries(genreCount).sort((a, b) => b[1] - a[1])[0][0];
+    const topGenre = Object.entries(genreCount).sort((a, b) => b[1] - a[1])[0][0];
 
-      try {
-        // Shuffle top 250 list and fetch details in batches until we have 6 matches
-        const shuffled = [...IMDB_TOP_250].sort(() => Math.random() - 0.5);
-        const results = [];
+    const shuffled = [...IMDB_TOP_250].sort(() => Math.random() - 0.5);
+    const recommendations = [];
 
-        for (let i = 0; i < shuffled.length && results.length < 6; i += 10) {
-          const batch = shuffled.slice(i, i + 10);
-          const batchDetails = await Promise.all(
-            batch.map(id =>
-              axios.get('http://www.omdbapi.com/', {
-                params: { apikey: OMDB_API_KEY, i: id }
-              }).then(r => r.data).catch(() => null)
-            )
-          );
+    for (let i = 0; i < shuffled.length && recommendations.length < 6; i += 10) {
+      const batch = shuffled.slice(i, i + 10);
+      const batchDetails = await Promise.all(
+        batch.map(id =>
+          axios.get('http://www.omdbapi.com/', {
+            params: { apikey: OMDB_API_KEY, i: id }
+          }).then(r => r.data).catch(() => null)
+        )
+      );
 
-          batchDetails.forEach(m => {
-            if (
-              m && m.Response !== 'False' &&
-              m.Poster && m.Poster !== 'N/A' &&
-              !watchedTitles.has(m.Title.toLowerCase()) &&
-              m.Genre && m.Genre.toLowerCase().includes(topGenre.toLowerCase()) &&
-              results.length < 6
-            ) {
-              results.push({
-                title: m.Title,
-                year: m.Year,
-                poster: m.Poster,
-                imdbRating: m.imdbRating,
-                genre: m.Genre
-              });
-            }
+      batchDetails.forEach(m => {
+        if (
+          m && m.Response !== 'False' &&
+          m.Poster && m.Poster !== 'N/A' &&
+          !watchedTitles.has(m.Title.toLowerCase()) &&
+          m.Genre && m.Genre.toLowerCase().includes(topGenre.toLowerCase()) &&
+          recommendations.length < 6
+        ) {
+          recommendations.push({
+            title: m.Title, year: m.Year, poster: m.Poster,
+            imdbRating: m.imdbRating, genre: m.Genre
           });
         }
-
-        res.json({ results, genre: topGenre });
-      } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch recommendations' });
-      }
+      });
     }
-  );
+
+    res.json({ results: recommendations, genre: topGenre });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
+  }
 });
 
 // ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🎬 Movie Tracker Server running on http://localhost:${PORT}`);
+  console.log(`🎬 PopcornLog running on http://localhost:${PORT}`);
 });

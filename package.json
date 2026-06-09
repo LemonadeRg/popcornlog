@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm rebuild sqlite3 --build-from-source",
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,7 +19,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
-    "sqlite3": "^6.0.1",
+    "pg": "^8.21.0",
     "yt-search": "^2.13.1"
   }
 }
