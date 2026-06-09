@@ -74,12 +74,25 @@
   <!-- MAIN APP PAGE -->
   <div id="appPage" style="display: none;">
 
-    <!-- TOP-LEFT LOGO (fixed, outside the pill) -->
-    <div class="sidebar-corner-logo" onclick="showSection('movies')" title="PopcornLog">
-      <img src="logo.svg" alt="PopcornLog" style="width:44px;height:44px;flex-shrink:0;">
-      <div class="sidebar-corner-text">
-        <span class="sidebar-corner-name">PopcornLog</span>
-        <span class="sidebar-corner-tagline">Track · Review · Discover</span>
+    <!-- TOP HEADER (full width, fixed) -->
+    <div class="sidebar-corner-logo">
+      <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="showSection('movies')">
+        <img src="logo.svg" alt="PopcornLog" style="width:40px;height:40px;flex-shrink:0;">
+        <div class="sidebar-corner-text">
+          <span class="sidebar-corner-name">PopcornLog</span>
+          <span class="sidebar-corner-tagline">Track · Review · Discover</span>
+        </div>
+      </div>
+      <!-- Centered section name -->
+      <div class="app-topbar-title"><span id="topbarSectionName">🎬 My Movies</span></div>
+      <!-- Right controls -->
+      <div class="app-topbar-controls" style="margin-left:auto;">
+        <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
+          <option value="en">🌐 EN</option>
+          <option value="fr">🌐 FR</option>
+          <option value="ar">🌐 AR</option>
+        </select>
+        <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em;" title="Toggle light/dark mode">🌙</button>
       </div>
     </div>
 
@@ -106,21 +119,6 @@
 
     <!-- MAIN CONTENT -->
     <div class="app-main">
-      <!-- Topbar -->
-      <div class="app-topbar">
-        <div class="app-topbar-title">
-          <span id="topbarSectionName">My Movies</span>
-        </div>
-        <div class="app-topbar-controls">
-          <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
-            <option value="en">🌐 EN</option>
-            <option value="fr">🌐 FR</option>
-            <option value="ar">🌐 AR</option>
-          </select>
-          <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em;" title="Toggle light/dark mode">🌙</button>
-        </div>
-      </div>
-
       <!-- Scrollable content -->
       <div class="app-content">
         <div class="container">

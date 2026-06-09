@@ -82,8 +82,8 @@ h1 {
 /* ===== SIDEBAR ===== */
 .sidebar {
   position: fixed;
-  left: 83px;
-  top: 50%;
+  left: 10px;
+  top: calc(56px + ((100vh - 56px) / 2));
   transform: translateY(-50%);
   width: 54px;
   background: var(--surface);
@@ -99,32 +99,35 @@ h1 {
   box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 
-/* Corner logo — fixed top-left, outside the pill */
+/* ===== TOP HEADER (full width) ===== */
 .sidebar-corner-logo {
   position: fixed;
   top: 0;
   left: 0;
-  width: 220px;
+  right: 0;
   height: 56px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
+  padding: 0 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   z-index: 201;
   transition: background 0.15s;
+  /* don't make whole header clickable — just the logo portion */
+  pointer-events: none;
 }
 
-.sidebar-corner-logo:hover {
-  background: var(--surface2);
+.sidebar-corner-logo > * {
+  pointer-events: auto;
 }
 
 .sidebar-corner-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: pointer;
 }
 
 .sidebar-corner-name {
@@ -242,19 +245,8 @@ h1 {
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
-  margin-left: 220px;
-}
-
-.app-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  height: 56px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  position: relative;
+  margin-left: 74px;
+  margin-top: 56px;
 }
 
 .app-topbar-title {
@@ -267,13 +259,13 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 2px;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .app-topbar-controls {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
 }
 
 .app-content {
