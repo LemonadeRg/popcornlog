@@ -1273,6 +1273,34 @@ function appendChatMessage(msg, scroll) {
   const isMe = parseInt(msg.user_id) === parseInt(chatMyUserId);
   const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  // Parse attached movie if any
+  let movie = null;
+  if (msg.movie_data) {
+    try { movie = typeof msg.movie_data === 'string' ? JSON.parse(msg.movie_data) : msg.movie_data; } catch(e) {}
+  }
+
+  // Build movie card HTML
+  let movieCardHtml = '';
+  if (movie) {
+    movieCardHtml = `
+      <div style="
+        display:flex; gap:10px; align-items:flex-start;
+        background:${isMe ? 'rgba(0,0,0,0.15)' : 'var(--surface)'};
+        border-radius:8px; padding:10px; margin-top:${msg.message ? '8px' : '0'};
+        border:1px solid ${isMe ? 'rgba(0,0,0,0.2)' : 'var(--border)'};
+        max-width:260px;
+      ">
+        ${movie.poster ? `<img src="${movie.poster}" style="width:44px; height:64px; object-fit:cover; border-radius:4px; flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+        <div style="min-width:0;">
+          <div style="font-weight:800; font-size:0.88em; color:${isMe ? '#000' : 'var(--text)'}; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(movie.title || '')}</div>
+          ${movie.year ? `<div style="font-size:0.75em; color:${isMe ? 'rgba(0,0,0,0.6)' : 'var(--text-muted)'};">${movie.year}</div>` : ''}
+          ${movie.genre ? `<div style="font-size:0.72em; color:${isMe ? 'rgba(0,0,0,0.55)' : 'var(--text-muted)'}; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(movie.genre)}</div>` : ''}
+          ${movie.imdbRating ? `<div style="font-size:0.75em; color:${isMe ? '#333' : '#f0b429'}; margin-top:4px; font-weight:700;">⭐ ${movie.imdbRating}</div>` : ''}
+          ${movie.rating ? `<div style="font-size:0.75em; margin-top:2px;">${'⭐'.repeat(movie.rating)} <span style="color:${isMe ? 'rgba(0,0,0,0.6)' : 'var(--text-muted)'};">My rating</span></div>` : ''}
+        </div>
+      </div>`;
+  }
+
   const div = document.createElement('div');
   div.style.cssText = `display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'};`;
   div.innerHTML = `
@@ -1283,14 +1311,14 @@ function appendChatMessage(msg, scroll) {
     </div>
     <div style="
       max-width:75%;
-      padding:10px 14px;
+      padding:${msg.message ? '10px 14px' : '10px'};
       border-radius:${isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
       background:${isMe ? 'var(--green)' : 'var(--surface2)'};
       color:${isMe ? '#000' : 'var(--text)'};
       font-size:0.95em;
       line-height:1.5;
       word-break:break-word;
-    ">${escapeHtml(msg.message)}</div>
+    ">${msg.message ? escapeHtml(msg.message) : ''}${movieCardHtml}</div>
   `;
   container.appendChild(div);
   if (scroll) scrollChatToBottom();
@@ -1308,14 +1336,17 @@ function escapeHtml(str) {
 async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
-  if (!message) return;
+  if (!message && !chatAttachedMovie) return;
 
+  const movieData = chatAttachedMovie;
   input.value = '';
+  clearChatMovie();
+
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message, movie_data: movieData || undefined })
     });
     const msg = await res.json();
     if (res.ok) {
@@ -1326,3 +1357,88 @@ async function sendChatMessage() {
     showAlert('❌ Failed to send message');
   }
 }
+
+// ===== CHAT MOVIE ATTACHMENT =====
+let chatAttachedMovie = null;
+let pickerSearchTimeout;
+
+function openMoviePicker() {
+  document.getElementById('moviePickerModal').classList.add('active');
+  // Populate with user's movies
+  const list = document.getElementById('pickerMyMovies');
+  list.innerHTML = allMovies.map(m => `
+    <div onclick="attachMovie(${JSON.stringify(JSON.stringify({
+      title: m.title, poster: m.posterUrl, year: m.year,
+      genre: m.genres, rating: m.rating, imdbRating: m.imdbRating
+    }))})" style="display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:6px; background:var(--surface2); cursor:pointer; border:1px solid transparent; transition:all 0.15s;"
+      onmouseover="this.style.borderColor='var(--green)'"
+      onmouseout="this.style.borderColor='transparent'">
+      <img src="${m.posterUrl}" style="width:32px; height:46px; object-fit:cover; border-radius:3px;" onerror="this.style.display='none'">
+      <div>
+        <div style="color:var(--text); font-weight:600; font-size:0.9em;">${m.title}</div>
+        <div style="color:var(--text-muted); font-size:0.78em;">${m.year || ''} · ${'⭐'.repeat(m.rating || 0)}</div>
+      </div>
+    </div>
+  `).join('') || `<p style="color:var(--text-muted); font-size:0.9em;">No movies in your list yet</p>`;
+}
+
+function closeMoviePicker() {
+  document.getElementById('moviePickerModal').classList.remove('active');
+  document.getElementById('pickerSearchInput').value = '';
+  document.getElementById('pickerSuggestions').classList.remove('active');
+}
+
+function searchMoviePicker() {
+  const q = document.getElementById('pickerSearchInput').value.trim();
+  const box = document.getElementById('pickerSuggestions');
+  clearTimeout(pickerSearchTimeout);
+  if (q.length < 2) { box.classList.remove('active'); return; }
+
+  pickerSearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/search/${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!data.results || data.results.length === 0) {
+        box.innerHTML = '<div class="suggestion-empty">No results</div>';
+        box.classList.add('active');
+        return;
+      }
+      box.innerHTML = data.results.map(m => `
+        <div class="suggestion-item" onclick="attachMovieFromSearch('${m.title.replace(/'/g,"\\'")}', '${(m.poster||'').replace(/'/g,"\\'")}', '${m.year||''}')">
+          <img src="${m.poster||''}" alt="" class="suggestion-poster" onerror="this.style.display='none'">
+          <div class="suggestion-info">
+            <div class="suggestion-title">${m.title}</div>
+            <div class="suggestion-year">${m.year}</div>
+          </div>
+        </div>
+      `).join('');
+      box.classList.add('active');
+    } catch(e) {}
+  }, 300);
+}
+
+async function attachMovieFromSearch(title, poster, year) {
+  attachMovie(JSON.stringify({ title, poster, year, genre: '', rating: null, imdbRating: null }));
+}
+
+function attachMovie(movieJsonStr) {
+  const movie = JSON.parse(movieJsonStr);
+  chatAttachedMovie = movie;
+  document.getElementById('chatPreviewPoster').src = movie.poster || '';
+  document.getElementById('chatPreviewTitle').textContent = movie.title;
+  document.getElementById('chatPreviewInfo').textContent =
+    [movie.year, movie.genre, movie.imdbRating ? `IMDb ${movie.imdbRating}` : null].filter(Boolean).join(' · ');
+  document.getElementById('chatMoviePreview').style.display = 'flex';
+  closeMoviePicker();
+}
+
+function clearChatMovie() {
+  chatAttachedMovie = null;
+  document.getElementById('chatMoviePreview').style.display = 'none';
+  document.getElementById('chatPreviewPoster').src = '';
+}
+
+window.addEventListener('click', function(e) {
+  const mp = document.getElementById('moviePickerModal');
+  if (mp && e.target === mp) closeMoviePicker();
+});

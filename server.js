@@ -577,7 +577,7 @@ initChatTable().catch(err => console.error('Chat table error:', err));
 app.get('/api/chat', requireAuth, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, user_id, username, avatar, message, created_at
+      `SELECT id, user_id, username, avatar, message, movie_data, created_at
        FROM chat_messages ORDER BY created_at DESC LIMIT 60`
     );
     res.json(result.rows.reverse());
@@ -590,7 +590,7 @@ app.get('/api/chat', requireAuth, async (req, res) => {
 app.get('/api/chat/since/:id', requireAuth, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, user_id, username, avatar, message, created_at
+      `SELECT id, user_id, username, avatar, message, movie_data, created_at
        FROM chat_messages WHERE id > $1 ORDER BY created_at ASC`,
       [req.params.id]
     );
@@ -602,16 +602,17 @@ app.get('/api/chat/since/:id', requireAuth, async (req, res) => {
 
 // Send a message
 app.post('/api/chat', requireAuth, async (req, res) => {
-  const { message } = req.body;
-  if (!message || !message.trim()) return res.status(400).json({ error: 'Empty message' });
-  if (message.length > 500) return res.status(400).json({ error: 'Message too long' });
+  const { message, movie_data } = req.body;
+  if ((!message || !message.trim()) && !movie_data) return res.status(400).json({ error: 'Empty message' });
+  if (message && message.length > 500) return res.status(400).json({ error: 'Message too long' });
 
   try {
     const userResult = await db.query('SELECT username, avatar FROM users WHERE id=$1', [req.session.userId]);
     const user = userResult.rows[0];
+    const movieDataStr = movie_data ? JSON.stringify(movie_data) : null;
     const result = await db.query(
-      'INSERT INTO chat_messages (user_id, username, avatar, message) VALUES ($1,$2,$3,$4) RETURNING *',
-      [req.session.userId, user.username, user.avatar || '🎬', message.trim()]
+      'INSERT INTO chat_messages (user_id, username, avatar, message, movie_data) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [req.session.userId, user.username, user.avatar || '🎬', (message || '').trim(), movieDataStr]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -620,6 +621,12 @@ app.post('/api/chat', requireAuth, async (req, res) => {
 });
 
 // ===== FRIENDS =====
+
+// Add movie_data column to chat if not exists
+async function initChatMovieColumn() {
+  await db.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS movie_data TEXT`);
+}
+initChatMovieColumn().catch(() => {});
 
 // Create friends table on init (added to initDB)
 async function initFriendsTable() {
