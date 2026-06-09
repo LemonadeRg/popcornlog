@@ -33,7 +33,10 @@
           <p class="auth-tagline" data-i18n="tagline">Track films you've watched.</p>
 
           <input type="email" id="loginEmail" class="auth-input" data-i18n="emailPlaceholder" placeholder="Email">
-          <input type="password" id="loginPassword" class="auth-input" data-i18n="passwordPlaceholder" placeholder="Password" style="margin-bottom:20px;">
+          <div class="pw-wrapper" style="margin-bottom:20px;">
+            <input type="password" id="loginPassword" class="auth-input" data-i18n="passwordPlaceholder" placeholder="Password" style="margin-bottom:0;">
+            <button type="button" class="pw-eye" onclick="togglePw('loginPassword', this)">👁</button>
+          </div>
           <button onclick="handleLogin()" class="auth-btn-primary" data-i18n="signIn">Sign In</button>
 
           <p class="auth-footer">
@@ -53,7 +56,10 @@
           <input type="text" id="signupUsername" class="auth-input" data-i18n="usernamePlaceholder" placeholder="Username">
           <input type="email" id="signupEmail" class="auth-input" data-i18n="emailPlaceholder" placeholder="Email" oninput="checkGmailHint()" style="margin-bottom:5px;">
           <p id="gmailHint" data-i18n="gmailHint" style="color:#e84040; font-size:0.82em; margin-bottom:10px; display:none;">Please enter your Gmail address (@gmail.com)</p>
-          <input type="password" id="signupPassword" class="auth-input" data-i18n="passwordHint" placeholder="Password (min 6 characters)" style="margin-bottom:20px;">
+          <div class="pw-wrapper" style="margin-bottom:20px;">
+            <input type="password" id="signupPassword" class="auth-input" data-i18n="passwordHint" placeholder="Password (min 6 characters)" style="margin-bottom:0;">
+            <button type="button" class="pw-eye" onclick="togglePw('signupPassword', this)">👁</button>
+          </div>
           <button onclick="handleSignup()" class="auth-btn-primary" data-i18n="createAccount">Create Account</button>
 
           <p class="auth-footer">
@@ -169,9 +175,18 @@
           <!-- Change Password -->
           <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
             <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">Change Password</h3>
-            <input type="password" id="currentPassword" placeholder="Current password" class="auth-input" style="margin-bottom:10px;">
-            <input type="password" id="newPassword" placeholder="New password (min 6 characters)" class="auth-input" style="margin-bottom:10px;">
-            <input type="password" id="confirmPassword" placeholder="Confirm new password" class="auth-input" style="margin-bottom:14px;">
+            <div class="pw-wrapper" style="margin-bottom:10px;">
+              <input type="password" id="currentPassword" placeholder="Current password" class="auth-input" style="margin-bottom:0;">
+              <button type="button" class="pw-eye" onclick="togglePw('currentPassword', this)">👁</button>
+            </div>
+            <div class="pw-wrapper" style="margin-bottom:10px;">
+              <input type="password" id="newPassword" placeholder="New password (min 6 characters)" class="auth-input" style="margin-bottom:0;">
+              <button type="button" class="pw-eye" onclick="togglePw('newPassword', this)">👁</button>
+            </div>
+            <div class="pw-wrapper" style="margin-bottom:14px;">
+              <input type="password" id="confirmPassword" placeholder="Confirm new password" class="auth-input" style="margin-bottom:0;">
+              <button type="button" class="pw-eye" onclick="togglePw('confirmPassword', this)">👁</button>
+            </div>
             <button onclick="changePassword()" style="padding:9px 24px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Update Password</button>
           </div>
 

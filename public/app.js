@@ -60,6 +60,13 @@ function showApp() {
   document.getElementById('appPage').style.display = 'block';
 }
 
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈' : '👁';
+}
+
 function checkGmailHint() {
   const email = document.getElementById('signupEmail').value.trim();
   const hint = document.getElementById('gmailHint');
