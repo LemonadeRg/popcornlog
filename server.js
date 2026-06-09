@@ -9,6 +9,7 @@ require('dotenv').config();
 
 const app = express();
 const OMDB_API_KEY = process.env.OMDB_API_KEY;
+const ADMIN_EMAIL = 'ragraguiriyad@gmail.com';
 
 // Middleware
 app.use(cors());
@@ -139,9 +140,12 @@ app.post('/auth/signin', async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(400).json({ error: 'Invalid email or password' });
 
+    if (user.is_banned) return res.status(403).json({ error: '🚫 Your account has been banned.' });
+
     req.session.userId = user.id;
     req.session.username = user.username;
-    res.json({ success: true, message: 'Logged in!', username: user.username, userId: user.id });
+    req.session.isAdmin = user.email === ADMIN_EMAIL;
+    res.json({ success: true, message: 'Logged in!', username: user.username, userId: user.id, isAdmin: req.session.isAdmin });
   } catch (err) {
     res.status(500).json({ error: 'Login error' });
   }
@@ -150,7 +154,7 @@ app.post('/auth/signin', async (req, res) => {
 // Check Auth Status
 app.get('/auth/status', (req, res) => {
   if (req.session.userId) {
-    res.json({ authenticated: true, username: req.session.username, userId: req.session.userId });
+    res.json({ authenticated: true, username: req.session.username, userId: req.session.userId, isAdmin: req.session.isAdmin || false });
   } else {
     res.json({ authenticated: false });
   }
@@ -622,6 +626,12 @@ app.post('/api/chat', requireAuth, async (req, res) => {
 
 // ===== FRIENDS =====
 
+// Add is_banned column to users if not exists
+async function initBanColumn() {
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE`);
+}
+initBanColumn().catch(() => {});
+
 // Add movie_data column to chat if not exists
 async function initChatMovieColumn() {
   await db.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS movie_data TEXT`);
@@ -772,6 +782,50 @@ app.get('/api/friends/:userId/movies', requireAuth, async (req, res) => {
       [friendId]
     );
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== ADMIN =====
+const requireAdmin = (req, res, next) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+  next();
+};
+
+// Get all users
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, username, email, avatar, is_banned, created_at,
+        (SELECT COUNT(*) FROM movies WHERE user_id = users.id) as movie_count
+       FROM users ORDER BY created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ban or unban a user
+app.put('/api/admin/users/:id/ban', requireAuth, requireAdmin, async (req, res) => {
+  const { ban } = req.body; // true or false
+  const targetId = parseInt(req.params.id);
+  if (targetId === req.session.userId) return res.status(400).json({ error: 'Cannot ban yourself' });
+  try {
+    await db.query('UPDATE users SET is_banned = $1 WHERE id = $2', [ban, targetId]);
+    // Destroy their session by deleting their movies access won't help much but ban prevents login
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete any chat message
+app.delete('/api/admin/chat/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db.query('DELETE FROM chat_messages WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

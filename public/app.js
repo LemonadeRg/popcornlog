@@ -30,6 +30,7 @@ let ratingCallback = null;
 let confirmCallback = null;
 let selectedRating = 0;
 let currentUserId = null;
+let currentIsAdmin = false;
 
 // ===== CHECK AUTHENTICATION =====
 window.addEventListener('load', async function() {
@@ -43,6 +44,8 @@ window.addEventListener('load', async function() {
 
   if (data.authenticated) {
     currentUserId = data.userId;
+    currentIsAdmin = data.isAdmin || false;
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
     showApp();
     loadMovies();
   } else {
@@ -127,6 +130,8 @@ async function submitSignup(username, email, password) {
     }
 
     currentUserId = data.userId;
+    currentIsAdmin = data.isAdmin || false;
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
     showAlert('✅ Account created! Welcome ' + username);
     showApp();
     loadMovies();
@@ -160,6 +165,8 @@ async function handleLogin() {
     }
 
     currentUserId = data.userId;
+    currentIsAdmin = data.isAdmin || false;
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
     showApp();
     loadMovies();
   } catch (error) {
@@ -226,6 +233,7 @@ function showSection(section) {
   document.getElementById('profileSection').style.display = 'none';
   document.getElementById('friendsSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'none';
+  document.getElementById('adminSection').style.display = 'none';
   document.getElementById('quizBtn').classList.remove('active');
   document.getElementById('profileBtn').classList.remove('active');
   document.getElementById('moviesBtn').classList.remove('active');
@@ -273,6 +281,10 @@ function showSection(section) {
     document.getElementById('chatSection').style.display = 'block';
     document.getElementById('chatBtn').classList.add('active');
     initChat();
+  } else if (section === 'admin') {
+    document.getElementById('adminSection').style.display = 'block';
+    loadAdminUsers();
+    loadAdminChat();
   }
 }
 
@@ -1442,3 +1454,107 @@ window.addEventListener('click', function(e) {
   const mp = document.getElementById('moviePickerModal');
   if (mp && e.target === mp) closeMoviePicker();
 });
+
+// ===== ADMIN =====
+async function loadAdminUsers() {
+  const list = document.getElementById('adminUsersList');
+  list.innerHTML = `<p style="color:var(--text-muted);">Loading...</p>`;
+  try {
+    const res = await fetch('/api/admin/users');
+    const users = await res.json();
+    if (!res.ok) { list.innerHTML = `<p style="color:var(--red);">Access denied</p>`; return; }
+
+    list.innerHTML = users.map(u => `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); gap:10px;">
+        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+          <span style="font-size:1.6em; flex-shrink:0;">${u.avatar || '🎬'}</span>
+          <div style="min-width:0;">
+            <div style="color:${u.is_banned ? '#e84040' : 'var(--text)'}; font-weight:700; font-size:0.9em;">
+              ${u.username} ${u.is_banned ? '<span style="color:#e84040; font-size:0.75em;">[BANNED]</span>' : ''}
+            </div>
+            <div style="color:var(--text-muted); font-size:0.75em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.email}</div>
+            <div style="color:var(--text-muted); font-size:0.72em;">${u.movie_count} movies · joined ${new Date(u.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>
+        ${u.email !== 'ragraguiriyad@gmail.com' ? `
+        <button onclick="toggleBan(${u.id}, ${!u.is_banned}, this)"
+          style="flex-shrink:0; padding:6px 14px; background:transparent; color:${u.is_banned ? 'var(--green)' : '#e84040'}; border:1px solid ${u.is_banned ? 'var(--green)' : '#e84040'}; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.78em; font-family:inherit; white-space:nowrap;">
+          ${u.is_banned ? '✅ Unban' : '🚫 Ban'}
+        </button>` : '<span style="color:var(--text-muted); font-size:0.75em;">You</span>'}
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = `<p style="color:var(--red);">Failed to load users</p>`;
+  }
+}
+
+async function toggleBan(userId, ban, btn) {
+  const action = ban ? 'Ban' : 'Unban';
+  showConfirm(`${action} this user?`, async (confirmed) => {
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/ban`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ban })
+      });
+      if (res.ok) {
+        showAlert(`✅ User ${action.toLowerCase()}ned successfully`);
+        loadAdminUsers();
+      }
+    } catch(e) {
+      showAlert('❌ Failed');
+    }
+  });
+}
+
+async function loadAdminChat() {
+  const list = document.getElementById('adminChatList');
+  list.innerHTML = `<p style="color:var(--text-muted);">Loading...</p>`;
+  try {
+    const res = await fetch('/api/chat');
+    const messages = await res.json();
+
+    if (messages.length === 0) {
+      list.innerHTML = `<p style="color:var(--text-muted); font-size:0.9em;">No messages yet</p>`;
+      return;
+    }
+
+    list.innerHTML = [...messages].reverse().map(m => {
+      const time = new Date(m.created_at).toLocaleString();
+      const movie = m.movie_data ? (() => { try { return JSON.parse(m.movie_data); } catch(e) { return null; } })() : null;
+      return `
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); gap:12px;">
+          <div style="display:flex; align-items:flex-start; gap:10px; min-width:0; flex:1;">
+            <span style="font-size:1.4em; flex-shrink:0;">${m.avatar || '🎬'}</span>
+            <div style="min-width:0;">
+              <span style="color:var(--green); font-weight:700; font-size:0.85em;">${m.username}</span>
+              <span style="color:var(--text-muted); font-size:0.72em; margin-left:8px;">${time}</span>
+              ${m.message ? `<div style="color:var(--text); font-size:0.9em; margin-top:2px; word-break:break-word;">${escapeHtml(m.message)}</div>` : ''}
+              ${movie ? `<div style="color:var(--text-muted); font-size:0.78em; margin-top:2px;">🎬 ${escapeHtml(movie.title || '')}</div>` : ''}
+            </div>
+          </div>
+          <button onclick="deleteAdminMessage(${m.id}, this)"
+            style="flex-shrink:0; padding:5px 10px; background:transparent; color:#e84040; border:1px solid #e84040; border-radius:4px; cursor:pointer; font-size:0.75em; font-family:inherit;">
+            🗑 Delete
+          </button>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<p style="color:var(--red);">Failed to load messages</p>`;
+  }
+}
+
+async function deleteAdminMessage(msgId, btn) {
+  showConfirm('Delete this message from the chat?', async (confirmed) => {
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/admin/chat/${msgId}`, { method: 'DELETE' });
+      if (res.ok) {
+        btn.closest('div[style*="border-bottom"]').remove();
+      }
+    } catch(e) {
+      showAlert('❌ Failed to delete message');
+    }
+  });
+}
