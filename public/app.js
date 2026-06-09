@@ -395,8 +395,10 @@ async function addMovie() {
         }),
       });
 
-      if (!response.ok) throw new Error('Movie not found on IMDb');
+      if (!response.ok) throw new Error('Movie not found');
 
+      const data = await response.json();
+      handleNewBadges(data.newBadges);
       document.getElementById('movieInput').value = '';
       loadMovies();
       showAlert('Movie added! ✅');
@@ -831,6 +833,73 @@ window.addEventListener('click', function(event) {
 });
 
 // ===== PROFILE =====
+// ===== BADGES =====
+function showBadgeToast(badge) {
+  const toast = document.getElementById('badgeToast');
+  document.getElementById('badgeToastEmoji').textContent = badge.emoji;
+  document.getElementById('badgeToastName').textContent = badge.name;
+  document.getElementById('badgeToastDesc').textContent = badge.desc;
+  toast.style.display = 'flex';
+  clearTimeout(window._badgeToastTimer);
+  window._badgeToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 4000);
+}
+
+function handleNewBadges(newBadges) {
+  if (!newBadges || newBadges.length === 0) return;
+  let delay = 0;
+  newBadges.forEach(badge => {
+    setTimeout(() => showBadgeToast(badge), delay);
+    delay += 4500;
+  });
+}
+
+async function loadBadges() {
+  try {
+    const res = await fetch('/api/badges');
+    const data = await res.json();
+    const grid = document.getElementById('badgesGrid');
+    if (!grid) return;
+
+    // Show active badge on avatar
+    const activeBadgeEl = document.getElementById('profileActiveBadge');
+    if (activeBadgeEl) {
+      if (data.activeBadge) {
+        const active = data.badges.find(b => b.id === data.activeBadge);
+        activeBadgeEl.textContent = active ? active.emoji : '';
+        activeBadgeEl.style.display = 'block';
+      } else {
+        activeBadgeEl.style.display = 'none';
+      }
+    }
+
+    grid.innerHTML = data.badges.map(b => `
+      <div onclick="${b.earned ? `equipBadge('${b.id}', '${data.activeBadge}')` : ''}"
+        title="${b.earned ? (data.activeBadge === b.id ? 'Equipped — click to unequip' : 'Click to equip') : 'Not earned yet'}"
+        style="
+          text-align:center; padding:12px 6px; border-radius:8px; cursor:${b.earned ? 'pointer' : 'default'};
+          background:${b.earned ? 'var(--surface2)' : 'transparent'};
+          border:1px solid ${data.activeBadge === b.id ? 'var(--green)' : 'var(--border)'};
+          opacity:${b.earned ? '1' : '0.35'};
+          transition:all 0.15s;
+        ">
+        <div style="font-size:1.8em; margin-bottom:5px;">${b.emoji}</div>
+        <div style="font-size:0.68em; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">${b.name}</div>
+        <div style="font-size:0.62em; color:var(--text-muted); margin-top:2px;">${b.desc}</div>
+      </div>
+    `).join('');
+  } catch (e) { console.error('Failed to load badges', e); }
+}
+
+async function equipBadge(badgeId, currentActive) {
+  const equip = currentActive === badgeId ? null : badgeId; // toggle off if already equipped
+  await fetch('/api/badges/equip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ badgeId: equip })
+  });
+  loadBadges();
+}
+
 async function loadProfile() {
   try {
     const res = await fetch('/api/profile');
@@ -846,6 +915,8 @@ async function loadProfile() {
 
     const joined = new Date(data.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('profileJoinDate').textContent = `Member since ${joined}`;
+
+    loadBadges();
   } catch (e) {
     console.error('Failed to load profile', e);
   }
@@ -1009,6 +1080,8 @@ function answerQuiz(chosen) {
     quizCorrect++;
     feedback.textContent = '✅ Correct!';
     feedback.style.color = '#00e054';
+    fetch('/api/badges/quiz-correct', { method: 'POST' })
+      .then(r => r.json()).then(d => handleNewBadges(d.newBadges)).catch(() => {});
   } else {
     quizWrong++;
     feedback.innerHTML = `❌ Wrong! It was <span style="color:#00e054;">${quizAnswer}</span>`;
@@ -1221,11 +1294,13 @@ async function loadPendingRequests() {
 
 async function respondToRequest(requestId, action, rowEl) {
   try {
-    await fetch(`/api/friends/request/${requestId}`, {
+    const res = await fetch(`/api/friends/request/${requestId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action })
     });
+    const data = await res.json();
+    handleNewBadges(data.newBadges);
     rowEl.remove();
     loadFriends();
     loadPendingRequests();
@@ -1512,6 +1587,7 @@ async function sendChatMessage() {
     if (res.ok) {
       appendChatMessage(msg, true);
       chatLastId = msg.id;
+      handleNewBadges(msg.newBadges);
     }
   } catch (e) {
     showAlert('❌ Failed to send message');

@@ -841,6 +841,16 @@ h1 {
   border-color: var(--red);
 }
 
+/* ===== BADGE TOAST ===== */
+#badgeToast {
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
 /* ===== SECTION TRANSITIONS ===== */
 @keyframes fadeSlideIn {
   from {

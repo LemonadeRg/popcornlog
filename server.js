@@ -121,10 +121,65 @@ async function initDB() {
     )
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_badges (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      badge_id TEXT NOT NULL,
+      earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, badge_id)
+    )
+  `);
+
+  // Add active_badge column if not exists
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_badge TEXT DEFAULT NULL`);
+
   console.log('✅ Database tables ready');
 }
 
 initDB().catch(err => console.error('DB init error:', err));
+
+// ===== BADGES =====
+const BADGES = {
+  first_movie:    { id: 'first_movie',    name: 'First Log',     emoji: '🎬', desc: 'Add your first movie' },
+  movie_buff:     { id: 'movie_buff',     name: 'Movie Buff',    emoji: '🍿', desc: 'Add 10 movies' },
+  cinephile:      { id: 'cinephile',      name: 'Cinephile',     emoji: '🏆', desc: 'Add 25 movies' },
+  film_fanatic:   { id: 'film_fanatic',   name: 'Film Fanatic',  emoji: '🌟', desc: 'Add 50 movies' },
+  the_critic:     { id: 'the_critic',     name: 'The Critic',    emoji: '⭐', desc: 'Give a 5-star rating' },
+  planner:        { id: 'planner',        name: 'Planner',       emoji: '📋', desc: 'Add to your watchlist' },
+  social:         { id: 'social',         name: 'Social',        emoji: '👥', desc: 'Accept a friend request' },
+  chatter:        { id: 'chatter',        name: 'Chatter',       emoji: '💬', desc: 'Send your first chat message' },
+  explorer:       { id: 'explorer',       name: 'Explorer',      emoji: '🗺️', desc: 'Watch movies in 5+ genres' },
+  quiz_master:    { id: 'quiz_master',    name: 'Quiz Master',   emoji: '🎲', desc: 'Get 5 quiz answers correct' },
+};
+
+// Award badge if not already earned, returns badge if newly earned
+async function awardBadge(userId, badgeId) {
+  try {
+    await db.query(
+      `INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [userId, badgeId]
+    );
+    return BADGES[badgeId] || null;
+  } catch (e) { return null; }
+}
+
+// Check and award movie-count badges
+async function checkMovieBadges(userId) {
+  const result = await db.query('SELECT COUNT(*) as cnt FROM movies WHERE user_id=$1', [userId]);
+  const count = parseInt(result.rows[0].cnt);
+  const newBadges = [];
+  if (count >= 1)  newBadges.push(await awardBadge(userId, 'first_movie'));
+  if (count >= 10) newBadges.push(await awardBadge(userId, 'movie_buff'));
+  if (count >= 25) newBadges.push(await awardBadge(userId, 'cinephile'));
+  if (count >= 50) newBadges.push(await awardBadge(userId, 'film_fanatic'));
+  // Check genre explorer
+  const genreRes = await db.query('SELECT genres FROM movies WHERE user_id=$1', [userId]);
+  const genres = new Set();
+  genreRes.rows.forEach(r => { if (r.genres) r.genres.split(',').forEach(g => genres.add(g.trim().toLowerCase())); });
+  if (genres.size >= 5) newBadges.push(await awardBadge(userId, 'explorer'));
+  return newBadges.filter(Boolean);
+}
 
 // ===== AUTHENTICATION ROUTES =====
 
@@ -239,7 +294,10 @@ app.post('/api/movies', requireAuth, async (req, res) => {
       [req.session.userId, movie.title, movie.genre, movie.director, movie.actors,
        movie.year, movie.imdbRating, movie.runtime, movie.poster, movie.plot, rating, notes]
     );
-    res.json({ success: true });
+    // Check rating badge
+    const newBadges = await checkMovieBadges(req.session.userId);
+    if (parseInt(rating) === 5) { const b = await awardBadge(req.session.userId, 'the_critic'); if (b) newBadges.push(b); }
+    res.json({ success: true, newBadges });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'You already have this movie in your list' });
@@ -300,7 +358,10 @@ app.post('/api/watchlist', requireAuth, async (req, res) => {
       [req.session.userId, movie.title, movie.genre, movie.director, movie.actors,
        movie.year, movie.imdbRating, movie.runtime, movie.poster, movie.plot]
     );
-    res.json({ success: true });
+    const newBadges = [];
+    const b = await awardBadge(req.session.userId, 'planner');
+    if (b) newBadges.push(b);
+    res.json({ success: true, newBadges });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'This movie is already in your watchlist' });
@@ -340,6 +401,63 @@ app.post('/api/watchlist-to-movies/:id', requireAuth, async (req, res) => {
 
     await db.query('DELETE FROM watchlist WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== BADGES ROUTES =====
+
+// Get my badges
+app.get('/api/badges', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT badge_id, earned_at FROM user_badges WHERE user_id=$1',
+      [req.session.userId]
+    );
+    const earned = new Set(result.rows.map(r => r.badge_id));
+    const all = Object.values(BADGES).map(b => ({
+      ...b,
+      earned: earned.has(b.id),
+      earnedAt: result.rows.find(r => r.badge_id === b.id)?.earned_at || null
+    }));
+    const userRes = await db.query('SELECT active_badge FROM users WHERE id=$1', [req.session.userId]);
+    res.json({ badges: all, activeBadge: userRes.rows[0]?.active_badge || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Equip a badge
+app.post('/api/badges/equip', requireAuth, async (req, res) => {
+  const { badgeId } = req.body;
+  try {
+    // Make sure user has earned it
+    if (badgeId) {
+      const check = await db.query(
+        'SELECT id FROM user_badges WHERE user_id=$1 AND badge_id=$2',
+        [req.session.userId, badgeId]
+      );
+      if (check.rows.length === 0) return res.status(403).json({ error: 'Badge not earned' });
+    }
+    await db.query('UPDATE users SET active_badge=$1 WHERE id=$2', [badgeId || null, req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Award quiz badge
+app.post('/api/badges/quiz-correct', requireAuth, async (req, res) => {
+  try {
+    // Track quiz correct count in session
+    req.session.quizCorrect = (req.session.quizCorrect || 0) + 1;
+    const newBadges = [];
+    if (req.session.quizCorrect >= 5) {
+      const b = await awardBadge(req.session.userId, 'quiz_master');
+      if (b) newBadges.push(b);
+    }
+    res.json({ newBadges, total: req.session.quizCorrect });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -650,7 +768,10 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       'INSERT INTO chat_messages (user_id, username, avatar, message, movie_data) VALUES ($1,$2,$3,$4,$5) RETURNING *',
       [req.session.userId, user.username, user.avatar || '🎬', (message || '').trim(), movieDataStr]
     );
-    res.json(result.rows[0]);
+    const newBadges = [];
+    const b = await awardBadge(req.session.userId, 'chatter');
+    if (b) newBadges.push(b);
+    res.json({ ...result.rows[0], newBadges });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -756,7 +877,9 @@ app.put('/api/friends/request/:id', requireAuth, async (req, res) => {
       `UPDATE friend_requests SET status = $1 WHERE id = $2 AND to_user_id = $3`,
       [action === 'accept' ? 'accepted' : 'declined', req.params.id, req.session.userId]
     );
-    res.json({ success: true });
+    const newBadges = [];
+    if (action === 'accept') { const b = await awardBadge(req.session.userId, 'social'); if (b) newBadges.push(b); }
+    res.json({ success: true, newBadges });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
