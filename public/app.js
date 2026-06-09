@@ -1,0 +1,1008 @@
+console.log('✅ app.js loaded successfully');
+
+// ===== THEME =====
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  updateThemeIcon(isLight);
+}
+
+function updateThemeIcon(isLight) {
+  document.querySelectorAll('#themeToggle, #themeToggleAuth').forEach(btn => {
+    if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+  });
+}
+
+// Apply saved theme on load
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    updateThemeIcon(true);
+  }
+})();
+
+let allMovies = [];
+let allWatchlist = [];
+let currentFilter = 'all';
+let selectedMovieId = null;
+let ratingCallback = null;
+let confirmCallback = null;
+let selectedRating = 0;
+let currentUserId = null;
+
+// ===== CHECK AUTHENTICATION =====
+window.addEventListener('load', async function() {
+  // Apply saved language on load
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  applyTranslations();
+
+  const response = await fetch('/auth/status');
+  const data = await response.json();
+
+  if (data.authenticated) {
+    currentUserId = data.userId;
+    showApp();
+    loadMovies();
+  } else {
+    showAuth();
+  }
+});
+
+function showAuth() {
+  document.getElementById('authPage').style.display = 'flex';
+  document.getElementById('appPage').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('authPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'block';
+}
+
+function checkGmailHint() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const hint = document.getElementById('gmailHint');
+  if (email.length > 0 && !email.toLowerCase().endsWith('@gmail.com')) {
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+function toggleAuth() {
+  document.getElementById('loginForm').style.display = 
+    document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = 
+    document.getElementById('signupForm').style.display === 'none' ? 'block' : 'none';
+}
+
+// ===== SIGN UP =====
+async function handleSignup() {
+  const username = document.getElementById('signupUsername').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+
+  if (!username || !email || !password) {
+    showAlert('❌ All fields required!');
+    return;
+  }
+
+  if (password.length < 6) {
+    showAlert('❌ Password must be at least 6 characters!');
+    return;
+  }
+
+  if (!email.toLowerCase().endsWith('@gmail.com')) {
+    showConfirm('Are you sure about your email? It doesn\'t look like a Gmail address (@gmail.com). Go back to fix it?', (confirmed) => {
+      if (confirmed) return;
+      submitSignup(username, email, password);
+    });
+    return;
+  }
+
+  submitSignup(username, email, password);
+}
+
+async function submitSignup(username, email, password) {
+  try {
+    const response = await fetch('/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showAlert('❌ ' + data.error);
+      return;
+    }
+
+    currentUserId = data.userId;
+    showAlert('✅ Account created! Welcome ' + username);
+    showApp();
+    loadMovies();
+  } catch (error) {
+    showAlert('❌ Signup failed: ' + error.message);
+  }
+}
+
+// ===== SIGN IN =====
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) {
+    showAlert('❌ Email and password required!');
+    return;
+  }
+
+  try {
+    const response = await fetch('/auth/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showAlert('❌ ' + data.error);
+      return;
+    }
+
+    currentUserId = data.userId;
+    showApp();
+    loadMovies();
+  } catch (error) {
+    showAlert('❌ Login failed: ' + error.message);
+  }
+}
+
+// ===== LOGOUT =====
+async function handleLogout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  currentUserId = null;
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('signupUsername').value = '';
+  document.getElementById('signupEmail').value = '';
+  document.getElementById('signupPassword').value = '';
+  showAuth();
+}
+
+// ===== ALERT & CONFIRM =====
+function showAlert(message) {
+  document.getElementById('alertMessage').textContent = message;
+  document.getElementById('alertModal').classList.add('active');
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').classList.remove('active');
+}
+
+function showConfirm(message, callback) {
+  document.getElementById('confirmMessage').textContent = message;
+  confirmCallback = callback;
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function confirmYes() {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmCallback) confirmCallback(true);
+  confirmCallback = null;
+}
+
+function confirmNo() {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmCallback) confirmCallback(false);
+  confirmCallback = null;
+}
+
+window.addEventListener('click', function(event) {
+  const alertModal = document.getElementById('alertModal');
+  const confirmModal = document.getElementById('confirmModal');
+  const avatarModal = document.getElementById('avatarModal');
+  if (alertModal && event.target === alertModal) closeAlert();
+  if (confirmModal && event.target === confirmModal) confirmNo();
+  if (avatarModal && event.target === avatarModal) closeAvatarPicker();
+});
+
+// ===== SECTION NAVIGATION =====
+function showSection(section) {
+  document.getElementById('moviesSection').style.display = 'none';
+  document.getElementById('watchlistSection').style.display = 'none';
+  document.getElementById('topratedSection').style.display = 'none';
+  document.getElementById('recommendedSection').style.display = 'none';
+  document.getElementById('quizSection').style.display = 'none';
+  document.getElementById('profileSection').style.display = 'none';
+  document.getElementById('quizBtn').classList.remove('active');
+  document.getElementById('profileBtn').classList.remove('active');
+  document.getElementById('moviesBtn').classList.remove('active');
+  document.getElementById('watchlistBtn').classList.remove('active');
+  document.getElementById('topratedBtn').classList.remove('active');
+  document.getElementById('recommendedBtn').classList.remove('active');
+
+  if (section === 'movies') {
+    document.getElementById('moviesSection').style.display = 'block';
+    document.getElementById('moviesBtn').classList.add('active');
+  } else if (section === 'watchlist') {
+    document.getElementById('watchlistSection').style.display = 'block';
+    document.getElementById('watchlistBtn').classList.add('active');
+    loadWatchlist();
+  } else if (section === 'profile') {
+    document.getElementById('profileSection').style.display = 'block';
+    document.getElementById('profileBtn').classList.add('active');
+    loadProfile();
+  } else if (section === 'quiz') {
+    document.getElementById('quizSection').style.display = 'block';
+    document.getElementById('quizBtn').classList.add('active');
+    quizUsedTitles = [];
+    quizCorrect = 0;
+    quizWrong = 0;
+    document.getElementById('quizCorrect').textContent = '0';
+    document.getElementById('quizWrong').textContent = '0';
+    loadQuiz();
+  } else if (section === 'recommended') {
+    document.getElementById('recommendedSection').style.display = 'block';
+    document.getElementById('recommendedBtn').classList.add('active');
+    loadRecommendations();
+  } else if (section === 'toprated') {
+    document.getElementById('topratedSection').style.display = 'block';
+    document.getElementById('topratedBtn').classList.add('active');
+    displayMovies(allMovies.filter(m => m.rating === 5), 'topratedContainer');
+  }
+}
+
+// ===== ADD MOVIE =====
+async function addMovie() {
+  const movieInput = document.getElementById('movieInput').value.trim();
+
+  if (!movieInput) {
+    showAlert('Please enter a movie name');
+    return;
+  }
+
+  openRatingModal(async (rating, notes) => {
+    try {
+      const response = await fetch('/api/movies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          movieName: movieInput,
+          rating: rating,
+          notes: notes || '',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Movie not found on IMDb');
+
+      document.getElementById('movieInput').value = '';
+      loadMovies();
+      showAlert('Movie added! ✅');
+    } catch (error) {
+      showAlert('Error: ' + error.message);
+    }
+  });
+}
+
+// ===== LOAD & DISPLAY MOVIES =====
+async function loadMovies() {
+  try {
+    const response = await fetch('/api/movies');
+    allMovies = await response.json();
+    displayMovies(allMovies);
+  } catch (error) {
+    console.error('Error loading movies:', error);
+  }
+}
+
+function displayMovies(movies, containerId = 'moviesContainer') {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  if (movies.length === 0) {
+    let isEmpty;
+    if (containerId === 'topratedContainer') {
+      isEmpty = `<h2>${t('noTopRated')}</h2><p>${t('noTopRatedSub')}</p>`;
+    } else if (containerId === 'watchlistContainer') {
+      isEmpty = `<h2>${t('noWatchlistYet')}</h2><p>${t('addWatchlistEmpty')}</p>`;
+    } else {
+      isEmpty = `<h2>${t('noMoviesYet')}</h2><p>${t('startAdding')}</p>`;
+    }
+    container.innerHTML = `<div class="empty-state">${isEmpty}</div>`;
+    return;
+  }
+
+  movies.forEach((movie) => {
+    const movieCard = document.createElement('div');
+    movieCard.className = 'movie-card';
+    movieCard.innerHTML = `
+      <div class="poster-container" onclick="openMovieDetails(${movie.id})">
+        <img src="${movie.posterUrl}" alt="${movie.title}" class="poster">
+        <div class="play-button">▶</div>
+      </div>
+      <div class="movie-info">
+        <h3>${movie.title}</h3>
+        <p class="genre">${movie.genres}</p>
+        <p class="director"><strong>Dir:</strong> ${movie.director.substring(0, 30)}</p>
+        <p class="actor"><strong>Actor:</strong> ${movie.mainCharacter}</p>
+        <div class="rating">
+          <span class="stars">${'⭐'.repeat(movie.rating)}</span>
+          <span class="rating-number">${movie.rating}/5</span>
+        </div>
+        <div class="actions">
+          <button class="view-btn" onclick="openMovieDetails(${movie.id})">View</button>
+          <button class="delete-btn" onclick="deleteMovie(${movie.id})">Delete</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(movieCard);
+  });
+}
+
+// ===== FILTER MOVIES =====
+function filterMovies(genre) {
+  currentFilter = genre;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (genre === 'all') {
+    displayMovies(allMovies);
+  } else {
+    const filtered = allMovies.filter((movie) =>
+      movie.genres.toLowerCase().includes(genre.toLowerCase())
+    );
+    displayMovies(filtered);
+  }
+}
+
+// ===== MOVIE DETAILS =====
+async function openMovieDetails(movieId) {
+  const movie = allMovies.find(m => m.id === movieId);
+  if (!movie) return;
+
+  selectedMovieId = movieId;
+
+  document.getElementById('modalTitle').textContent = movie.title;
+  document.getElementById('modalPoster').src = movie.posterUrl;
+  document.getElementById('modalGenre').textContent = movie.genres || 'N/A';
+  document.getElementById('modalDirector').textContent = movie.director || 'N/A';
+  document.getElementById('modalActor').textContent = movie.mainCharacter || 'N/A';
+  document.getElementById('modalPlot').textContent = movie.plot || 'Plot not available';
+  document.getElementById('modalYear').textContent = movie.year || 'N/A';
+  document.getElementById('modalIMDbRating').textContent = movie.imdbRating || 'N/A';
+  document.getElementById('modalRuntime').textContent = movie.runtime || 'N/A';
+
+  document.getElementById('modalUserRating').innerHTML = `
+    <div class="user-stars">${'⭐'.repeat(movie.rating)}</div>
+    <div style="color: #00d9ff; font-weight: bold;">${movie.rating}/5</div>
+  `;
+
+  if (movie.userNotes) {
+    document.getElementById('modalUserNotes').innerHTML = `<strong>Your Notes:</strong> ${movie.userNotes}`;
+  } else {
+    document.getElementById('modalUserNotes').textContent = 'No notes added';
+  }
+
+  const trailerContainer = document.getElementById('trailerContainer');
+  trailerContainer.innerHTML = `<div style="background:#1c2228; padding:40px; border-radius:6px; border:1px solid #2c3440; text-align:center;"><p style="color:#7a8a99;">${t('loadingTrailer')}</p></div>`;
+
+  fetch(`/api/trailer/${encodeURIComponent(movie.title)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.videoId) {
+        trailerContainer.innerHTML = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${data.videoId}" allowfullscreen></iframe></div>`;
+      } else throw new Error();
+    })
+    .catch(() => {
+      trailerContainer.innerHTML = `<div style="background:#1c2228; padding:50px 30px; border-radius:6px; border:1px solid #2c3440; text-align:center;"><h3 style="color:#7a8a99;">${t('trailerUnavailable')}</h3></div>`;
+    });
+
+  const modalActions = document.querySelector('.modal-actions');
+  modalActions.innerHTML = `
+    <button class="edit-btn" onclick="editMovieFromModal()">Edit Rating & Notes</button>
+    <button class="delete-modal-btn" onclick="deleteMovieFromModal()">Delete</button>
+  `;
+
+  document.getElementById('movieModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('movieModal').classList.remove('active');
+  document.getElementById('trailerContainer').innerHTML = '';
+  selectedMovieId = null;
+}
+
+function editMovieFromModal() {
+  if (!selectedMovieId) return;
+  const movie = allMovies.find(m => m.id === selectedMovieId);
+  const newRating = prompt('New rating (1-5):', movie.rating);
+  if (newRating) {
+    const newNotes = prompt('Update notes:', movie.userNotes || '');
+    updateMovie(selectedMovieId, parseInt(newRating), newNotes);
+    closeModal();
+  }
+}
+
+function deleteMovieFromModal() {
+  showConfirm('Delete this movie?', (confirmed) => {
+    if (confirmed) {
+      deleteMovie(selectedMovieId);
+      closeModal();
+    }
+  });
+}
+
+async function updateMovie(id, rating, notes) {
+  await fetch(`/api/movies/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, userNotes: notes }),
+  });
+  loadMovies();
+}
+
+async function deleteMovie(id) {
+  showConfirm('Delete this movie?', async (confirmed) => {
+    if (confirmed) {
+      await fetch(`/api/movies/${id}`, { method: 'DELETE' });
+      loadMovies();
+    }
+  });
+}
+
+window.addEventListener('click', function(event) {
+  const modal = document.getElementById('movieModal');
+  if (modal && event.target === modal) closeModal();
+});
+
+// ===== WATCHLIST =====
+async function addToWatchlist() {
+  const input = document.getElementById('watchlistInput').value.trim();
+  if (!input) {
+    showAlert('Please enter a movie name');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movieName: input }),
+    });
+
+    if (!response.ok) throw new Error('Movie not found on IMDb');
+
+    document.getElementById('watchlistInput').value = '';
+    showAlert('Added to Watch Later! ✅');
+    loadWatchlist();
+  } catch (error) {
+    showAlert('Error: ' + error.message);
+  }
+}
+
+async function loadWatchlist() {
+  try {
+    const response = await fetch('/api/watchlist');
+    allWatchlist = await response.json();
+    displayWatchlist(allWatchlist);
+  } catch (error) {
+    console.error('Error loading watchlist:', error);
+  }
+}
+
+function displayWatchlist(movies) {
+  const container = document.getElementById('watchlistContainer');
+  container.innerHTML = '';
+
+  if (movies.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h2>No movies yet</h2>
+        <p>Add movies you want to watch later! 🎬</p>
+      </div>
+    `;
+    return;
+  }
+
+  movies.forEach((movie) => {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    card.innerHTML = `
+      <div class="poster-container" onclick="openWatchlistDetails(${movie.id})">
+        <img src="${movie.posterUrl}" alt="${movie.title}" class="poster">
+        <div class="play-button">▶</div>
+      </div>
+      <div class="movie-info">
+        <h3>${movie.title}</h3>
+        <p class="genre">${movie.genres}</p>
+        <p class="director"><strong>Dir:</strong> ${movie.director.substring(0, 30)}</p>
+        <p class="actor"><strong>Actor:</strong> ${movie.mainCharacter}</p>
+        <p style="color: #ffd700; margin: 10px 0; font-size: 0.9em;"><strong>IMDb:</strong> ⭐ ${movie.imdbRating}</p>
+        <div class="watchlist-actions">
+          <button class="watch-btn" onclick="markAsWatched(${movie.id})">✅ Watched</button>
+          <button class="remove-btn" onclick="removeFromWatchlist(${movie.id})">Remove</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function openWatchlistDetails(movieId) {
+  const movie = allWatchlist.find(m => m.id === movieId);
+  if (!movie) return;
+
+  document.getElementById('modalTitle').textContent = movie.title;
+  document.getElementById('modalPoster').src = movie.posterUrl;
+  document.getElementById('modalGenre').textContent = movie.genres || 'N/A';
+  document.getElementById('modalDirector').textContent = movie.director || 'N/A';
+  document.getElementById('modalActor').textContent = movie.mainCharacter || 'N/A';
+  document.getElementById('modalPlot').textContent = movie.plot || 'Plot not available';
+  document.getElementById('modalYear').textContent = movie.year || 'N/A';
+  document.getElementById('modalIMDbRating').textContent = movie.imdbRating || 'N/A';
+  document.getElementById('modalRuntime').textContent = movie.runtime || 'N/A';
+
+  document.getElementById('modalUserRating').innerHTML = `<div style="color: #aaa; font-style: italic;">Not watched yet</div>`;
+  document.getElementById('modalUserNotes').innerHTML = `<div style="color: #aaa;">Click "Watched" on the card to add your rating!</div>`;
+
+  const modalActions = document.querySelector('.modal-actions');
+  modalActions.innerHTML = `
+    <button class="edit-btn" onclick="closeModal(); markAsWatched(${movie.id})">✅ Mark as Watched</button>
+    <button class="delete-modal-btn" onclick="closeModal(); removeFromWatchlist(${movie.id})">Remove from List</button>
+  `;
+
+  const trailerContainer = document.getElementById('trailerContainer');
+  trailerContainer.innerHTML = `<div style="background:#1c2228; padding:40px; border-radius:6px; border:1px solid #2c3440; text-align:center;"><p style="color:#7a8a99;">${t('loadingTrailer')}</p></div>`;
+
+  fetch(`/api/trailer/${encodeURIComponent(movie.title)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.videoId) {
+        trailerContainer.innerHTML = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${data.videoId}" allowfullscreen></iframe></div>`;
+      } else throw new Error();
+    })
+    .catch(() => {
+      trailerContainer.innerHTML = `<div style="background:#1c2228; padding:50px 30px; border-radius:6px; border:1px solid #2c3440; text-align:center;"><h3 style="color:#7a8a99;">${t('trailerUnavailable')}</h3></div>`;
+    });
+
+  document.getElementById('movieModal').classList.add('active');
+}
+
+async function removeFromWatchlist(id) {
+  showConfirm('Remove from Watch Later?', async (confirmed) => {
+    if (confirmed) {
+      await fetch(`/api/watchlist/${id}`, { method: 'DELETE' });
+      loadWatchlist();
+    }
+  });
+}
+
+async function markAsWatched(id) {
+  openRatingModal(async (rating, notes) => {
+    try {
+      const response = await fetch(`/api/watchlist-to-movies/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: rating, notes: notes || '' }),
+      });
+
+      if (!response.ok) throw new Error('Error');
+      
+      showAlert('Moved to My Movies! ✅');
+      loadWatchlist();
+      loadMovies();
+    } catch (error) {
+      showAlert('Error: ' + error.message);
+    }
+  });
+}
+
+// ===== SEARCH =====
+let searchTimeout;
+
+async function searchMovies(inputId, suggestionsId) {
+  const input = document.getElementById(inputId);
+  const suggestionsBox = document.getElementById(suggestionsId);
+  const query = input.value.trim();
+
+  clearTimeout(searchTimeout);
+
+  if (query.length < 2) {
+    suggestionsBox.classList.remove('active');
+    suggestionsBox.innerHTML = '';
+    return;
+  }
+
+  searchTimeout = setTimeout(async () => {
+    try {
+      const response = await fetch(`/api/search/${encodeURIComponent(query)}`);
+      const data = await response.json();
+
+      if (data.results && data.results.length > 0) {
+        suggestionsBox.innerHTML = data.results.map(movie => `
+          <div class="suggestion-item" onclick="selectSuggestion('${inputId}', '${suggestionsId}', '${movie.title.replace(/'/g, "\\'")}')">
+            <img src="${movie.poster || ''}" alt="" class="suggestion-poster" onerror="this.style.display='none'">
+            <div class="suggestion-info">
+              <div class="suggestion-title">${movie.title}</div>
+              <div class="suggestion-year">${movie.year}</div>
+            </div>
+          </div>
+        `).join('');
+        suggestionsBox.classList.add('active');
+      } else {
+        suggestionsBox.innerHTML = '<div class="suggestion-empty">No movies found</div>';
+        suggestionsBox.classList.add('active');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  }, 300);
+}
+
+function selectSuggestion(inputId, suggestionsId, title) {
+  document.getElementById(inputId).value = title;
+  document.getElementById(suggestionsId).classList.remove('active');
+  document.getElementById(suggestionsId).innerHTML = '';
+}
+
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.search-wrapper')) {
+    document.querySelectorAll('.suggestions-box').forEach(box => {
+      box.classList.remove('active');
+    });
+  }
+});
+
+// ===== RATING MODAL =====
+function openRatingModal(callback) {
+  selectedRating = 0;
+  ratingCallback = callback;
+  document.getElementById('ratingModal').classList.add('active');
+  document.getElementById('notesInput').value = '';
+  document.getElementById('selectedRatingDisplay').textContent = 'Select a rating';
+  
+  document.querySelectorAll('.star-rating .star').forEach(star => {
+    star.classList.remove('selected');
+  });
+}
+
+function closeRatingModal() {
+  document.getElementById('ratingModal').classList.remove('active');
+  selectedRating = 0;
+  ratingCallback = null;
+}
+
+function selectRating(rating) {
+  selectedRating = rating;
+  
+  document.querySelectorAll('.star-rating .star').forEach((star, index) => {
+    if (index < rating) {
+      star.classList.add('selected');
+    } else {
+      star.classList.remove('selected');
+    }
+  });
+  
+  document.getElementById('selectedRatingDisplay').textContent = `Rating: ${rating}/5 ⭐`;
+}
+
+function submitRating() {
+  if (selectedRating === 0) {
+    showAlert('Please select a rating!');
+    return;
+  }
+  
+  const notes = document.getElementById('notesInput').value.trim();
+  
+  if (ratingCallback) {
+    ratingCallback(selectedRating, notes);
+  }
+  
+  closeRatingModal();
+}
+
+window.addEventListener('click', function(event) {
+  const ratingModal = document.getElementById('ratingModal');
+  if (ratingModal && event.target === ratingModal) {
+    closeRatingModal();
+  }
+});
+
+// ===== PROFILE =====
+async function loadProfile() {
+  try {
+    const res = await fetch('/api/profile');
+    const data = await res.json();
+
+    document.getElementById('profileAvatar').textContent = data.avatar;
+    document.getElementById('profileUsername').textContent = data.username;
+    document.getElementById('profileEmail').textContent = data.email;
+    document.getElementById('profileBio').value = data.bio;
+    document.getElementById('statMovies').textContent = data.totalMovies;
+    document.getElementById('statAvg').textContent = data.avgRating;
+    document.getElementById('statWatchlist').textContent = data.watchlistCount;
+
+    const joined = new Date(data.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('profileJoinDate').textContent = `Member since ${joined}`;
+  } catch (e) {
+    console.error('Failed to load profile', e);
+  }
+}
+
+async function saveProfile() {
+  const bio = document.getElementById('profileBio').value.trim();
+  const avatar = document.getElementById('profileAvatar').textContent;
+
+  const res = await fetch('/api/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bio, avatar })
+  });
+  const data = await res.json();
+  if (res.ok) showAlert('✅ Profile saved!');
+  else showAlert('❌ ' + data.error);
+}
+
+async function changePassword() {
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    showAlert('❌ All fields required');
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    showAlert('❌ New passwords do not match');
+    return;
+  }
+
+  const res = await fetch('/api/profile/password', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showAlert('✅ Password updated!');
+    document.getElementById('currentPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+  } else {
+    showAlert('❌ ' + data.error);
+  }
+}
+
+function deleteAccount() {
+  const password = prompt('Enter your password to confirm account deletion:');
+  if (!password) return;
+
+  showConfirm('This will permanently delete your account and ALL your movies. Are you sure?', async (confirmed) => {
+    if (!confirmed) return;
+
+    const res = await fetch('/api/profile', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showAuth();
+    } else {
+      showAlert('❌ ' + data.error);
+    }
+  });
+}
+
+const AVATARS = ['🎬','🍿','🎥','🎞️','🦁','🐺','🦊','🐻','🐼','🎭','👻','🤖','🦸','🧙','🧛','🎃','🌟','🔥','💎','🎮','🏆','🎯','🎸','🎨'];
+
+function openAvatarPicker() {
+  document.getElementById('avatarGrid').innerHTML = AVATARS.map(e =>
+    `<span onclick="selectAvatar('${e}')" style="font-size:2em; cursor:pointer; padding:8px; border-radius:6px; border:2px solid transparent; transition:all 0.15s; display:block;"
+      onmouseover="this.style.borderColor='var(--green)'; this.style.background='var(--surface2)'"
+      onmouseout="this.style.borderColor='transparent'; this.style.background='transparent'">${e}</span>`
+  ).join('');
+  document.getElementById('avatarModal').classList.add('active');
+}
+
+function closeAvatarPicker() {
+  document.getElementById('avatarModal').classList.remove('active');
+}
+
+function selectAvatar(emoji) {
+  document.getElementById('profileAvatar').textContent = emoji;
+  closeAvatarPicker();
+}
+
+// ===== QUIZ =====
+let quizCorrect = 0;
+let quizWrong = 0;
+let quizAnswer = null;
+let quizAnswered = false;
+let quizUsedTitles = [];
+
+async function loadQuiz() {
+  quizAnswered = false;
+  document.getElementById('quizFeedback').textContent = '';
+  document.getElementById('quizPlot').textContent = 'Loading...';
+  document.getElementById('quizOptions').innerHTML = '';
+  document.getElementById('quizNextBtn').style.display = 'none';
+
+  try {
+    const params = quizUsedTitles.length
+      ? '?exclude=' + encodeURIComponent(JSON.stringify(quizUsedTitles))
+      : '';
+    const res = await fetch('/api/quiz' + params);
+    if (!res.ok) {
+      const d = await res.json();
+      document.getElementById('quizPlot').textContent = d.error;
+      document.getElementById('quizNextBtn').style.display = 'inline-block';
+      return;
+    }
+    const data = await res.json();
+
+    // If all movies used, reset and start over
+    if (data.reset) {
+      quizUsedTitles = [];
+    }
+    quizUsedTitles.push(data.answer);
+    quizAnswer = data.answer;
+
+    document.getElementById('quizPlot').textContent = data.plot;
+
+    document.getElementById('quizOptions').innerHTML = data.options.map(opt => `
+      <button onclick="answerQuiz('${opt.replace(/'/g, "\\'")}')"
+        style="padding:14px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border);
+               border-radius:6px; cursor:pointer; font-size:0.9em; font-family:inherit; font-weight:600;
+               transition:all 0.2s; text-align:center;">
+        ${opt}
+      </button>
+    `).join('');
+  } catch (e) {
+    document.getElementById('quizPlot').textContent = 'Failed to load quiz.';
+    document.getElementById('quizNextBtn').style.display = 'inline-block';
+  }
+}
+
+function answerQuiz(chosen) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+
+  const buttons = document.getElementById('quizOptions').querySelectorAll('button');
+  buttons.forEach(btn => {
+    btn.style.cursor = 'default';
+    if (btn.textContent.trim() === quizAnswer) {
+      btn.style.background = '#00e054';
+      btn.style.color = '#000';
+      btn.style.borderColor = '#00e054';
+    } else if (btn.textContent.trim() === chosen && chosen !== quizAnswer) {
+      btn.style.background = '#e84040';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#e84040';
+    }
+  });
+
+  const feedback = document.getElementById('quizFeedback');
+  if (chosen === quizAnswer) {
+    quizCorrect++;
+    feedback.textContent = '✅ Correct!';
+    feedback.style.color = '#00e054';
+  } else {
+    quizWrong++;
+    feedback.innerHTML = `❌ Wrong! It was <span style="color:#00e054;">${quizAnswer}</span>`;
+    feedback.style.color = '#e84040';
+  }
+
+  document.getElementById('quizCorrect').textContent = quizCorrect;
+  document.getElementById('quizWrong').textContent = quizWrong;
+  document.getElementById('quizNextBtn').style.display = 'inline-block';
+}
+
+// ===== RECOMMENDATIONS =====
+async function loadRecommendations() {
+  const container = document.getElementById('recommendedContainer');
+  const subtitle = document.getElementById('recommendedSubtitle');
+  container.innerHTML = `<div style="text-align:center; color:#aaa; padding: 40px; width:100%;">Finding movies you might like...</div>`;
+
+  try {
+    const response = await fetch('/api/recommendations');
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      subtitle.textContent = '';
+      container.innerHTML = `
+        <div class="empty-state">
+          <h2>${t('noRecommendations')}</h2>
+          <p>${t('noRecommendationsSub')}</p>
+        </div>`;
+      return;
+    }
+
+    subtitle.textContent = t('topRatedSubtitle').replace('{genre}', data.genre);
+
+    container.innerHTML = data.results.map(movie => `
+      <div class="movie-card">
+        <div class="poster-container" onclick="openRecommendedDetails('${movie.title.replace(/'/g, "\\'")}', '${movie.poster}', '${movie.genre}', '${movie.year}', '${movie.imdbRating}')">
+          <img src="${movie.poster}" alt="${movie.title}" class="poster">
+          <div class="play-button">▶</div>
+        </div>
+        <div class="movie-info">
+          <h3>${movie.title}</h3>
+          <p class="genre">${movie.genre}</p>
+          <p style="color:#ffd700; font-size:0.9em;">⭐ IMDb: ${movie.imdbRating}</p>
+          <p style="color:#aaa; font-size:0.85em;">${movie.year}</p>
+          <div class="actions" style="margin-top: 10px;">
+            <button class="view-btn" onclick="openRecommendedDetails('${movie.title.replace(/'/g, "\\'")}', '${movie.poster}', '${movie.genre}', '${movie.year}', '${movie.imdbRating}')">View</button>
+            <button class="delete-btn" onclick="addRecommendedToWatchlist('${movie.title.replace(/'/g, "\\'")}')">+ Watchlist</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    container.innerHTML = `<div class="empty-state"><h2>Failed to load recommendations</h2></div>`;
+  }
+}
+
+function openRecommendedDetails(title, poster, genre, year, imdbRating) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalPoster').src = poster;
+  document.getElementById('modalGenre').textContent = genre || 'N/A';
+  document.getElementById('modalDirector').textContent = 'N/A';
+  document.getElementById('modalActor').textContent = 'N/A';
+  document.getElementById('modalPlot').textContent = 'Loading...';
+  document.getElementById('modalYear').textContent = year || 'N/A';
+  document.getElementById('modalIMDbRating').textContent = imdbRating || 'N/A';
+  document.getElementById('modalRuntime').textContent = 'N/A';
+  document.getElementById('modalUserRating').innerHTML = `<div style="color:#aaa; font-style:italic;">Not watched yet</div>`;
+  document.getElementById('modalUserNotes').innerHTML = '';
+
+  const modalActions = document.querySelector('.modal-actions');
+  modalActions.innerHTML = `
+    <button class="edit-btn" onclick="closeModal(); addRecommendedToWatchlist('${title.replace(/'/g, "\\'")}')">+ Add to Watchlist</button>
+  `;
+
+  // Load trailer
+  const trailerContainer = document.getElementById('trailerContainer');
+  trailerContainer.innerHTML = `<div style="background:#0f1424; padding:40px; border-radius:10px; border:1px solid #00d9ff; text-align:center;"><p style="color:#aaa;">Loading trailer...</p></div>`;
+
+  fetch(`/api/trailer/${encodeURIComponent(title)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.videoId) {
+        trailerContainer.innerHTML = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${data.videoId}" allowfullscreen></iframe></div>`;
+      } else throw new Error();
+    })
+    .catch(() => {
+      trailerContainer.innerHTML = `<div style="background:#0f1424; padding:50px 30px; border-radius:10px; border:1px solid #ff006e; text-align:center;"><h3 style="color:#ff006e;">🎬 Trailer Not Available</h3></div>`;
+    });
+
+  // Also fetch full OMDB details for plot/director/actors
+  fetch(`/api/search/${encodeURIComponent(title)}`)
+    .then(r => r.json())
+    .then(() => {
+      return fetch(`/api/movies-detail/${encodeURIComponent(title)}`);
+    }).catch(() => {});
+
+  document.getElementById('movieModal').classList.add('active');
+}
+
+async function addRecommendedToWatchlist(title) {
+  try {
+    const response = await fetch('/api/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movieName: title })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      showAlert('❌ ' + data.error);
+    } else {
+      showAlert('Added to Watch Later! ✅');
+    }
+  } catch (error) {
+    showAlert('❌ Error adding to watchlist');
+  }
+}

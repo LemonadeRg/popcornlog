@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="100" fill="#1c2228"/>
+
+  <!-- Popcorn bucket body -->
+  <polygon points="45,105 155,105 140,165 60,165" fill="#14181c" stroke="#00e054" stroke-width="2.5"/>
+
+  <!-- Bucket stripes -->
+  <polygon points="100,105 115,105 110,165 100,165" fill="#00e054" opacity="0.15"/>
+  <polygon points="68,105 83,105 70,165 60,165" fill="#00e054" opacity="0.15"/>
+  <polygon points="128,105 143,105 140,165 128,165" fill="#00e054" opacity="0.15"/>
+
+  <!-- Bucket top rim -->
+  <rect x="42" y="100" width="116" height="12" rx="4" fill="#00e054"/>
+
+  <!-- Film strip across bottom of bucket -->
+  <rect x="60" y="148" width="80" height="14" rx="2" fill="#00e054" opacity="0.9"/>
+  <rect x="64" y="150" width="8" height="10" rx="1" fill="#14181c"/>
+  <rect x="76" y="150" width="8" height="10" rx="1" fill="#14181c"/>
+  <rect x="88" y="150" width="8" height="10" rx="1" fill="#14181c"/>
+  <rect x="100" y="150" width="8" height="10" rx="1" fill="#14181c"/>
+  <rect x="112" y="150" width="8" height="10" rx="1" fill="#14181c"/>
+  <rect x="124" y="150" width="8" height="10" rx="1" fill="#14181c"/>
+
+  <!-- Popcorn puffs -->
+  <!-- Left cluster -->
+  <circle cx="68" cy="88" r="15" fill="#f0b429"/>
+  <circle cx="55" cy="76" r="13" fill="#f5c842"/>
+  <circle cx="76" cy="72" r="14" fill="#f0b429"/>
+
+  <!-- Middle cluster -->
+  <circle cx="100" cy="82" r="17" fill="#f5c842"/>
+  <circle cx="89" cy="68" r="13" fill="#f0b429"/>
+  <circle cx="111" cy="68" r="13" fill="#f0b429"/>
+  <circle cx="100" cy="60" r="12" fill="#f5c842"/>
+
+  <!-- Right cluster -->
+  <circle cx="132" cy="88" r="15" fill="#f0b429"/>
+  <circle cx="124" cy="72" r="14" fill="#f5c842"/>
+  <circle cx="145" cy="76" r="13" fill="#f0b429"/>
+</svg>

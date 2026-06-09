@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PopcornLog</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- LOGIN/SIGNUP PAGE -->
+  <div id="authPage" style="display: flex;">
+    <div class="auth-wrapper">
+      <div class="auth-box">
+
+        <!-- Language Switcher + Theme -->
+        <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:24px;">
+          <select onchange="setLang(this.value)" id="langSelectAuth" style="padding:6px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
+            <option value="en">🌐 EN</option>
+            <option value="fr">🌐 FR</option>
+            <option value="ar">🌐 AR</option>
+          </select>
+          <button id="themeToggleAuth" onclick="toggleTheme()" style="padding:6px 10px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1em;" title="Toggle light/dark mode">🌙</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm">
+          <div style="text-align:center; margin-bottom:10px;">
+            <img src="logo.svg" alt="PopcornLog" style="width:220px; height:220px; display:block; margin:0 auto;">
+          </div>
+          <h1 style="color:var(--text); text-align:center; margin-bottom:6px; font-size:1.8em; letter-spacing:3px;">PopcornLog</h1>
+          <p class="auth-tagline" data-i18n="tagline">Track films you've watched.</p>
+
+          <input type="email" id="loginEmail" class="auth-input" data-i18n="emailPlaceholder" placeholder="Email">
+          <input type="password" id="loginPassword" class="auth-input" data-i18n="passwordPlaceholder" placeholder="Password" style="margin-bottom:20px;">
+          <button onclick="handleLogin()" class="auth-btn-primary" data-i18n="signIn">Sign In</button>
+
+          <p class="auth-footer">
+            <span data-i18n="noAccount">No account?</span>
+            <span onclick="toggleAuth()" style="color:var(--green); cursor:pointer; margin-left:4px;" data-i18n="signUp">Sign Up</span>
+          </p>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" style="display:none;">
+          <div style="text-align:center; margin-bottom:10px;">
+            <img src="logo.svg" alt="PopcornLog" style="width:220px; height:220px; display:block; margin:0 auto;">
+          </div>
+          <h1 style="color:var(--text); text-align:center; margin-bottom:6px; font-size:1.8em; letter-spacing:3px;">PopcornLog</h1>
+          <p class="auth-tagline" data-i18n="tagline">Track films you've watched.</p>
+
+          <input type="text" id="signupUsername" class="auth-input" data-i18n="usernamePlaceholder" placeholder="Username">
+          <input type="email" id="signupEmail" class="auth-input" data-i18n="emailPlaceholder" placeholder="Email" oninput="checkGmailHint()" style="margin-bottom:5px;">
+          <p id="gmailHint" data-i18n="gmailHint" style="color:#e84040; font-size:0.82em; margin-bottom:10px; display:none;">Please enter your Gmail address (@gmail.com)</p>
+          <input type="password" id="signupPassword" class="auth-input" data-i18n="passwordHint" placeholder="Password (min 6 characters)" style="margin-bottom:20px;">
+          <button onclick="handleSignup()" class="auth-btn-primary" data-i18n="createAccount">Create Account</button>
+
+          <p class="auth-footer">
+            <span data-i18n="haveAccount">Have an account?</span>
+            <span onclick="toggleAuth()" style="color:var(--green); cursor:pointer; margin-left:4px;" data-i18n="signIn">Sign In</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP PAGE -->
+  <div id="appPage" style="display: none;">
+    <div class="container">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid #2c3440; padding-bottom:20px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <img src="logo.svg" alt="PopcornLog" style="width:64px; height:64px; cursor:pointer;" onclick="showSection('movies')">
+            <div>
+              <h1 style="font-size:1.5em; letter-spacing:3px; color:var(--text); text-align:left; margin-bottom:2px;">PopcornLog</h1>
+              <p class="tagline" style="text-align:left; margin-bottom:0;" data-i18n="tagline">Track films you've watched.</p>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <!-- Language Switcher (app) -->
+          <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
+            <option value="en">🌐 EN</option>
+            <option value="fr">🌐 FR</option>
+            <option value="ar">🌐 AR</option>
+          </select>
+          <!-- Theme Toggle -->
+          <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em; transition:all 0.2s;" title="Toggle light/dark mode">🌙</button>
+          <button onclick="showSection('profile')" id="profileBtn" style="padding:8px 18px; background:transparent; color:var(--text-dim); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">👤 Profile</button>
+          <button onclick="handleLogout()" data-i18n="signOut"
+            style="padding:8px 18px; background:transparent; color:#7a8a99; border:1px solid #2c3440; border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;"
+            onmouseover="this.style.borderColor='#e84040';this.style.color='#e84040'"
+            onmouseout="this.style.borderColor='#2c3440';this.style.color='#7a8a99'">Sign Out</button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap;">
+        <button onclick="showSection('movies')" id="moviesBtn" class="section-btn active" data-i18n="myMovies">🎬 My Movies</button>
+        <button onclick="showSection('watchlist')" id="watchlistBtn" class="section-btn" data-i18n="watchLater">📋 Watch Later</button>
+        <button onclick="showSection('toprated')" id="topratedBtn" class="section-btn" data-i18n="topRated">⭐ Top Rated</button>
+        <button onclick="showSection('recommended')" id="recommendedBtn" class="section-btn" data-i18n="recommended">🎯 Recommended</button>
+        <button onclick="showSection('quiz')" id="quizBtn" class="section-btn">🎬 Quiz</button>
+      </div>
+
+      <div id="moviesSection">
+        <div class="add-movie-section">
+          <div class="search-wrapper">
+            <input type="text" id="movieInput" data-i18n="searchMoviePlaceholder" placeholder="Search for a movie..."
+              autocomplete="off"
+              oninput="searchMovies('movieInput', 'moviesSuggestions')"
+              onkeypress="if(event.key==='Enter') addMovie()">
+            <div id="moviesSuggestions" class="suggestions-box"></div>
+          </div>
+          <button onclick="addMovie()" data-i18n="addMovie">+ Add Movie</button>
+        </div>
+
+        <div class="filter-section">
+          <button onclick="filterMovies('all')" class="filter-btn active" data-i18n="allMovies">All Movies</button>
+          <button onclick="filterMovies('Action')" class="filter-btn">Action</button>
+          <button onclick="filterMovies('Sci-Fi')" class="filter-btn">Sci-Fi</button>
+          <button onclick="filterMovies('Drama')" class="filter-btn">Drama</button>
+          <button onclick="filterMovies('Comedy')" class="filter-btn">Comedy</button>
+          <button onclick="filterMovies('Horror')" class="filter-btn">Horror</button>
+          <button onclick="filterMovies('Thriller')" class="filter-btn">Thriller</button>
+          <button onclick="filterMovies('Romance')" class="filter-btn">Romance</button>
+        </div>
+
+        <div class="movies-grid" id="moviesContainer"></div>
+      </div>
+
+      <!-- PROFILE SECTION -->
+      <div id="profileSection" style="display:none;">
+        <div style="max-width:600px; margin:0 auto;">
+
+          <!-- Avatar + Name -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; margin-bottom:20px; text-align:center;">
+            <div id="profileAvatar" style="font-size:5em; margin-bottom:12px; cursor:pointer;" onclick="openAvatarPicker()" title="Click to change avatar">🎬</div>
+            <h2 id="profileUsername" style="color:var(--text); font-size:1.6em; margin-bottom:4px;"></h2>
+            <p id="profileEmail" style="color:var(--text-dim); font-size:0.88em; margin-bottom:16px;"></p>
+            <p id="profileJoinDate" style="color:var(--text-muted); font-size:0.8em; text-transform:uppercase; letter-spacing:1px;"></p>
+          </div>
+
+          <!-- Stats -->
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+              <div id="statMovies" style="font-size:2em; font-weight:800; color:var(--green);">0</div>
+              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Movies</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+              <div id="statAvg" style="font-size:2em; font-weight:800; color:var(--green);">-</div>
+              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Avg Rating</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+              <div id="statWatchlist" style="font-size:2em; font-weight:800; color:var(--green);">0</div>
+              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Watchlist</div>
+            </div>
+          </div>
+
+          <!-- Bio -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
+            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Bio</h3>
+            <textarea id="profileBio" placeholder="Write something about yourself..." rows="3"
+              style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:12px; font-family:inherit; font-size:0.95em; resize:vertical;"></textarea>
+            <button onclick="saveProfile()" style="margin-top:12px; padding:9px 24px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Save</button>
+          </div>
+
+          <!-- Change Password -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
+            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">Change Password</h3>
+            <input type="password" id="currentPassword" placeholder="Current password" class="auth-input" style="margin-bottom:10px;">
+            <input type="password" id="newPassword" placeholder="New password (min 6 characters)" class="auth-input" style="margin-bottom:10px;">
+            <input type="password" id="confirmPassword" placeholder="Confirm new password" class="auth-input" style="margin-bottom:14px;">
+            <button onclick="changePassword()" style="padding:9px 24px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Update Password</button>
+          </div>
+
+          <!-- Delete Account -->
+          <div style="background:var(--surface); border:1px solid #e84040; border-radius:8px; padding:24px;">
+            <h3 style="color:#e84040; font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Danger Zone</h3>
+            <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:16px;">Permanently delete your account and all your movies. This cannot be undone.</p>
+            <button onclick="deleteAccount()" style="padding:9px 24px; background:transparent; color:#e84040; border:1px solid #e84040; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Delete Account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avatar Picker Modal -->
+      <div class="modal" id="avatarModal">
+        <div class="modal-content" style="max-width:420px;">
+          <div class="modal-header">
+            <h2 class="modal-title">Choose Avatar</h2>
+            <button class="close-btn" onclick="closeAvatarPicker()">&times;</button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; text-align:center;" id="avatarGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="quizSection" style="display:none;">
+        <div style="max-width:650px; margin:0 auto; text-align:center;">
+          <h2 style="color:var(--text); margin-bottom:6px; font-size:1.6em; letter-spacing:2px;">🎬 Movie Quiz</h2>
+          <p style="color:var(--text-dim); margin-bottom:30px; font-size:0.9em;">Guess the movie from the plot summary</p>
+
+          <div id="quizScore" style="display:flex; justify-content:center; gap:30px; margin-bottom:30px;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 28px;">
+              <div style="font-size:1.8em; font-weight:800; color:#00e054;" id="quizCorrect">0</div>
+              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Correct</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 28px;">
+              <div style="font-size:1.8em; font-weight:800; color:#e84040;" id="quizWrong">0</div>
+              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Wrong</div>
+            </div>
+          </div>
+
+          <div id="quizCard" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; margin-bottom:20px;">
+            <p style="color:var(--text-dim); font-size:0.85em; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">What movie has this plot?</p>
+            <p id="quizPlot" style="color:var(--text); font-size:1.05em; line-height:1.8; margin-bottom:30px; font-style:italic;"></p>
+            <div id="quizOptions" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
+            <div id="quizFeedback" style="margin-top:24px; font-size:1.1em; font-weight:700; min-height:30px;"></div>
+          </div>
+
+          <button onclick="loadQuiz()" id="quizNextBtn" style="padding:12px 36px; background:#00e054; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.9em; font-family:inherit; text-transform:uppercase; letter-spacing:1px;">Next Question</button>
+        </div>
+      </div>
+
+      <div id="recommendedSection" style="display: none;">
+        <h2 style="color:var(--text); margin-bottom:5px; text-align:center;" data-i18n="recommendedFor">Recommended For You</h2>
+        <p id="recommendedSubtitle" style="color:#7a8a99; text-align:center; margin-bottom:20px;"></p>
+        <div class="movies-grid" id="recommendedContainer"></div>
+      </div>
+
+      <div id="topratedSection" style="display: none;">
+        <h2 style="color:var(--text); margin-bottom:20px; text-align:center;" data-i18n="fiveStarMovies">5 Star Movies</h2>
+        <div class="movies-grid" id="topratedContainer"></div>
+      </div>
+
+      <div id="watchlistSection" style="display: none;">
+        <div class="add-movie-section">
+          <div class="search-wrapper">
+            <input type="text" id="watchlistInput" data-i18n="watchlistPlaceholder" placeholder="Add a movie to watch later..."
+              autocomplete="off"
+              oninput="searchMovies('watchlistInput', 'watchlistSuggestions')"
+              onkeypress="if(event.key==='Enter') addToWatchlist()">
+            <div id="watchlistSuggestions" class="suggestions-box"></div>
+          </div>
+          <button onclick="addToWatchlist()" data-i18n="addWatchlist">+ Add to Watch Later</button>
+        </div>
+        <div class="movies-grid" id="watchlistContainer"></div>
+      </div>
+    </div>
+
+    <!-- Rating Modal -->
+    <div class="modal" id="ratingModal">
+      <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+          <h2 class="modal-title" data-i18n="rateReview">Rate & Review</h2>
+          <button class="close-btn" onclick="closeRatingModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:30px;">
+          <h3 style="color:#c8d0d9; margin-bottom:20px; text-align:center;" data-i18n="selectRating">Select Your Rating</h3>
+          <div style="display:flex; justify-content:center; gap:15px; margin-bottom:40px;">
+            <div class="star-rating" id="starRating">
+              <span class="star" onclick="selectRating(1)">⭐</span>
+              <span class="star" onclick="selectRating(2)">⭐</span>
+              <span class="star" onclick="selectRating(3)">⭐</span>
+              <span class="star" onclick="selectRating(4)">⭐</span>
+              <span class="star" onclick="selectRating(5)">⭐</span>
+            </div>
+          </div>
+          <div id="selectedRatingDisplay" style="text-align:center; color:#c8d0d9; font-size:1.1em; font-weight:bold; margin-bottom:30px;" data-i18n="selectRatingText">Select a rating</div>
+          <h3 style="color:#c8d0d9; margin-bottom:10px;" data-i18n="yourNotes">Your Notes (Optional)</h3>
+          <textarea id="notesInput" data-i18n="notesPlaceholder" placeholder="Write your thoughts about this movie..."
+            style="width:100%; height:120px; padding:15px; background:#14181c; color:#c8d0d9; border:1px solid #2c3440; border-radius:4px; font-family:inherit; font-size:0.95em; resize:vertical;"></textarea>
+          <div style="display:flex; gap:12px; margin-top:24px;">
+            <button onclick="closeRatingModal()" data-i18n="cancel"
+              style="flex:1; padding:11px; background:#242c35; color:#7a8a99; border:1px solid #2c3440; border-radius:4px; cursor:pointer; font-weight:700; font-family:inherit;">Cancel</button>
+            <button onclick="submitRating()" data-i18n="confirm"
+              style="flex:1; padding:11px; background:#00e054; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-family:inherit;">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Movie Details Modal -->
+    <div class="modal" id="movieModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">Movie Title</h2>
+          <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="trailerContainer"></div>
+          <div class="movie-details">
+            <img id="modalPoster" src="" alt="Poster" class="poster-large">
+            <div class="details-text">
+              <div class="details-row">
+                <span class="details-label" data-i18n="genre">Genre:</span>
+                <span class="details-value" id="modalGenre">-</span>
+              </div>
+              <div class="details-row">
+                <span class="details-label" data-i18n="director">Director:</span>
+                <span class="details-value" id="modalDirector">-</span>
+              </div>
+              <div class="details-row">
+                <span class="details-label" data-i18n="mainActor">Main Actor:</span>
+                <span class="details-value" id="modalActor">-</span>
+              </div>
+              <div class="details-row">
+                <span class="details-label" data-i18n="year">Year:</span>
+                <span class="details-value" id="modalYear">-</span>
+              </div>
+              <div class="details-row">
+                <span class="details-label" data-i18n="imdbRating">IMDb Rating:</span>
+                <span class="details-value" id="modalIMDbRating">-</span>
+              </div>
+              <div class="details-row">
+                <span class="details-label" data-i18n="runtime">Runtime:</span>
+                <span class="details-value" id="modalRuntime">-</span>
+              </div>
+              <div class="user-rating">
+                <h4 data-i18n="yourRating">Your Rating</h4>
+                <div class="user-stars" id="modalUserRating">⭐ ⭐ ⭐</div>
+                <div class="user-notes" id="modalUserNotes">No notes added</div>
+              </div>
+            </div>
+          </div>
+          <div class="plot-section">
+            <h3 data-i18n="plotSummary">Plot Summary</h3>
+            <p id="modalPlot">Loading plot...</p>
+          </div>
+          <div class="modal-actions">
+            <button class="edit-btn" onclick="editMovieFromModal()" data-i18n="editRating">Edit Rating & Notes</button>
+            <button class="delete-modal-btn" onclick="deleteMovieFromModal()" data-i18n="delete">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Modal -->
+  <div class="modal" id="alertModal">
+    <div class="modal-content" style="max-width:400px;">
+      <div class="modal-header">
+        <h2 class="modal-title" data-i18n="alert">Alert</h2>
+        <button class="close-btn" onclick="closeAlert()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:30px;">
+        <p id="alertMessage" style="color:#c8d0d9; font-size:1.05em; line-height:1.5; margin-bottom:30px;"></p>
+        <button onclick="closeAlert()" data-i18n="ok"
+          style="width:100%; padding:11px; background:#00e054; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-family:inherit;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content" style="max-width:400px;">
+      <div class="modal-header">
+        <h2 class="modal-title" data-i18n="confirm">Confirm</h2>
+        <button class="close-btn" onclick="confirmNo()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:30px;">
+        <p id="confirmMessage" style="color:#c8d0d9; font-size:1.05em; line-height:1.5; margin-bottom:30px;"></p>
+        <div style="display:flex; gap:12px;">
+          <button onclick="confirmNo()" id="confirmNoBtn" data-i18n="cancel"
+            style="flex:1; padding:11px; background:#242c35; color:#7a8a99; border:1px solid #2c3440; border-radius:4px; cursor:pointer; font-weight:700; font-family:inherit;">Cancel</button>
+          <button onclick="confirmYes()" id="confirmYesBtn" data-i18n="confirm"
+            style="flex:1; padding:11px; background:#e84040; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-family:inherit;">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
