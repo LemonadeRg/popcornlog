@@ -455,6 +455,16 @@
           </div>
           <button onclick="addToWatchlist()" data-i18n="addWatchlist">+ Add to Watch Later</button>
         </div>
+        <div class="filter-section">
+          <button onclick="filterWatchlist('all')" class="filter-btn active" id="wl-filter-all">All</button>
+          <button onclick="filterWatchlist('Action')" class="filter-btn">Action</button>
+          <button onclick="filterWatchlist('Sci-Fi')" class="filter-btn">Sci-Fi</button>
+          <button onclick="filterWatchlist('Drama')" class="filter-btn">Drama</button>
+          <button onclick="filterWatchlist('Comedy')" class="filter-btn">Comedy</button>
+          <button onclick="filterWatchlist('Horror')" class="filter-btn">Horror</button>
+          <button onclick="filterWatchlist('Thriller')" class="filter-btn">Thriller</button>
+          <button onclick="filterWatchlist('Romance')" class="filter-btn">Romance</button>
+        </div>
         <div class="movies-grid" id="watchlistContainer"></div>
       </div>
 

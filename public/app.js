@@ -609,8 +609,22 @@ async function loadWatchlist() {
     const response = await fetch('/api/watchlist');
     allWatchlist = await response.json();
     displayWatchlist(allWatchlist);
+    // Reset filter to All
+    document.querySelectorAll('#watchlistSection .filter-btn').forEach(b => b.classList.remove('active'));
+    const allBtn = document.getElementById('wl-filter-all');
+    if (allBtn) allBtn.classList.add('active');
   } catch (error) {
     console.error('Error loading watchlist:', error);
+  }
+}
+
+function filterWatchlist(genre) {
+  document.querySelectorAll('#watchlistSection .filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (genre === 'all') {
+    displayWatchlist(allWatchlist);
+  } else {
+    displayWatchlist(allWatchlist.filter(m => m.genres && m.genres.toLowerCase().includes(genre.toLowerCase())));
   }
 }
 
