@@ -841,6 +841,22 @@ h1 {
   border-color: var(--red);
 }
 
+/* ===== SECTION TRANSITIONS ===== */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-visible {
+  animation: fadeSlideIn 0.22s ease forwards;
+}
+
 /* ===== EMPTY STATE ===== */
 .empty-state {
   grid-column: 1 / -1;

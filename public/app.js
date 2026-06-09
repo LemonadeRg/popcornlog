@@ -287,6 +287,16 @@ window.addEventListener('click', function(event) {
 });
 
 // ===== SECTION NAVIGATION =====
+function showSectionEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'block';
+  el.classList.remove('section-visible');
+  // force reflow so animation retriggers
+  void el.offsetWidth;
+  el.classList.add('section-visible');
+}
+
 const sectionNames = {
   movies: '🎬 My Movies',
   watchlist: '📋 Watch Later',
@@ -319,18 +329,18 @@ function showSection(section) {
   if (titleEl) titleEl.textContent = sectionNames[section] || '';
 
   if (section === 'movies') {
-    document.getElementById('moviesSection').style.display = 'block';
+    showSectionEl('moviesSection');
     document.getElementById('moviesBtn').classList.add('active');
   } else if (section === 'watchlist') {
-    document.getElementById('watchlistSection').style.display = 'block';
+    showSectionEl('watchlistSection');
     document.getElementById('watchlistBtn').classList.add('active');
     loadWatchlist();
   } else if (section === 'profile') {
-    document.getElementById('profileSection').style.display = 'block';
+    showSectionEl('profileSection');
     document.getElementById('profileBtn').classList.add('active');
     loadProfile();
   } else if (section === 'quiz') {
-    document.getElementById('quizSection').style.display = 'block';
+    showSectionEl('quizSection');
     document.getElementById('quizBtn').classList.add('active');
     quizUsedTitles = [];
     quizCorrect = 0;
@@ -339,24 +349,24 @@ function showSection(section) {
     document.getElementById('quizWrong').textContent = '0';
     loadQuiz();
   } else if (section === 'recommended') {
-    document.getElementById('recommendedSection').style.display = 'block';
+    showSectionEl('recommendedSection');
     document.getElementById('recommendedBtn').classList.add('active');
     loadRecommendations();
   } else if (section === 'toprated') {
-    document.getElementById('topratedSection').style.display = 'block';
+    showSectionEl('topratedSection');
     document.getElementById('topratedBtn').classList.add('active');
     displayMovies(allMovies.filter(m => m.rating === 5), 'topratedContainer');
   } else if (section === 'friends') {
-    document.getElementById('friendsSection').style.display = 'block';
+    showSectionEl('friendsSection');
     document.getElementById('friendsBtn').classList.add('active');
     loadFriends();
     loadPendingRequests();
   } else if (section === 'chat') {
-    document.getElementById('chatSection').style.display = 'block';
+    showSectionEl('chatSection');
     document.getElementById('chatBtn').classList.add('active');
     initChat();
   } else if (section === 'admin') {
-    document.getElementById('adminSection').style.display = 'block';
+    showSectionEl('adminSection');
     const adminBtn = document.getElementById('adminBtn');
     if (adminBtn) adminBtn.classList.add('active');
     loadAdminUsers();
