@@ -80,11 +80,68 @@ function checkGmailHint() {
   }
 }
 
+let pendingVerifyEmail = '';
+
 function toggleAuth() {
-  document.getElementById('loginForm').style.display = 
+  document.getElementById('loginForm').style.display =
     document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
-  document.getElementById('signupForm').style.display = 
+  document.getElementById('signupForm').style.display =
     document.getElementById('signupForm').style.display === 'none' ? 'block' : 'none';
+  document.getElementById('verifyForm').style.display = 'none';
+}
+
+function showLoginForm() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('signupForm').style.display = 'none';
+  document.getElementById('verifyForm').style.display = 'none';
+}
+
+function showVerifyForm(email) {
+  pendingVerifyEmail = email;
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('signupForm').style.display = 'none';
+  document.getElementById('verifyForm').style.display = 'block';
+  document.getElementById('verifyCode').value = '';
+  document.getElementById('verifyEmailHint').textContent = `We sent a 6-digit code to ${email}`;
+}
+
+async function submitVerify() {
+  const code = document.getElementById('verifyCode').value.trim();
+  if (code.length !== 6) { showAlert('❌ Enter the 6-digit code'); return; }
+
+  try {
+    const res = await fetch('/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pendingVerifyEmail, code })
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert('❌ ' + data.error); return; }
+
+    currentUserId = data.userId;
+    currentIsAdmin = data.isAdmin || false;
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
+    showApp();
+    loadMovies();
+  } catch (e) {
+    showAlert('❌ Verification failed');
+  }
+}
+
+async function resendCode() {
+  if (!pendingVerifyEmail) return;
+  try {
+    const res = await fetch('/auth/resend-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pendingVerifyEmail })
+    });
+    const data = await res.json();
+    if (res.ok) showAlert('✅ New code sent! Check your email.');
+    else showAlert('❌ ' + data.error);
+  } catch(e) {
+    showAlert('❌ Failed to resend');
+  }
 }
 
 // ===== SIGN UP =====
@@ -129,6 +186,11 @@ async function submitSignup(username, email, password) {
       return;
     }
 
+    if (data.needsVerification) {
+      showVerifyForm(data.email);
+      return;
+    }
+
     currentUserId = data.userId;
     currentIsAdmin = data.isAdmin || false;
     if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
@@ -160,6 +222,7 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
+      if (data.needsVerification) { showVerifyForm(data.email); return; }
       showAlert('❌ ' + data.error);
       return;
     }

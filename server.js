@@ -5,11 +5,39 @@ const axios = require('axios');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
 const OMDB_API_KEY = process.env.OMDB_API_KEY;
 const ADMIN_EMAIL = 'ragraguiriyad@gmail.com';
+
+// Email transporter
+const mailer = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+async function sendVerificationEmail(toEmail, code) {
+  await mailer.sendMail({
+    from: `"PopcornLog 🍿" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: 'Your PopcornLog verification code',
+    html: `
+      <div style="font-family:sans-serif; max-width:480px; margin:0 auto; padding:32px; background:#14181c; color:#c8d0d9; border-radius:12px;">
+        <h1 style="color:#00e054; letter-spacing:3px; margin-bottom:8px;">🍿 PopcornLog</h1>
+        <p style="color:#7a8a99; margin-bottom:24px;">Thanks for signing up! Use this code to verify your account:</p>
+        <div style="font-size:2.5em; font-weight:900; letter-spacing:10px; color:#fff; background:#1c2228; padding:20px; border-radius:8px; text-align:center; border:1px solid #2c3440;">
+          ${code}
+        </div>
+        <p style="color:#445566; font-size:0.85em; margin-top:24px;">This code expires in 15 minutes. If you didn't sign up, ignore this email.</p>
+      </div>
+    `
+  });
+}
 
 // Middleware
 app.use(cors());
@@ -108,18 +136,69 @@ app.post('/auth/signup', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+
+    // Insert unverified user (or update code if they're retrying)
     const result = await db.query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id',
-      [username, email, hashedPassword]
+      `INSERT INTO users (username, email, password, is_verified, verify_code, verify_expires)
+       VALUES ($1, $2, $3, FALSE, $4, $5)
+       ON CONFLICT (email) DO UPDATE
+         SET verify_code = $4, verify_expires = $5
+       RETURNING id`,
+      [username, email, hashedPassword, code, expires]
     );
-    req.session.userId = result.rows[0].id;
-    req.session.username = username;
-    res.json({ success: true, message: 'Account created!' });
+
+    await sendVerificationEmail(email, code);
+    res.json({ success: true, needsVerification: true, email });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'Email or username already exists' });
     }
+    console.error('Signup error:', err);
     res.status(500).json({ error: 'Signup failed' });
+  }
+});
+
+// Verify email code
+app.post('/auth/verify', async (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) return res.status(400).json({ error: 'Missing fields' });
+
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    if (!user) return res.status(400).json({ error: 'User not found' });
+    if (user.is_verified) return res.status(400).json({ error: 'Already verified' });
+    if (user.verify_code !== code.trim()) return res.status(400).json({ error: 'Incorrect code' });
+    if (new Date() > new Date(user.verify_expires)) return res.status(400).json({ error: 'Code expired — please sign up again' });
+
+    await db.query('UPDATE users SET is_verified = TRUE, verify_code = NULL, verify_expires = NULL WHERE id = $1', [user.id]);
+
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.isAdmin = user.email === ADMIN_EMAIL;
+    res.json({ success: true, username: user.username, userId: user.id, isAdmin: req.session.isAdmin });
+  } catch (err) {
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// Resend verification code
+app.post('/auth/resend-code', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    if (!user || user.is_verified) return res.status(400).json({ error: 'Invalid request' });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    await db.query('UPDATE users SET verify_code = $1, verify_expires = $2 WHERE id = $3', [code, expires, user.id]);
+    await sendVerificationEmail(email, code);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to resend code' });
   }
 });
 
@@ -141,6 +220,7 @@ app.post('/auth/signin', async (req, res) => {
     if (!validPassword) return res.status(400).json({ error: 'Invalid email or password' });
 
     if (user.is_banned) return res.status(403).json({ error: '🚫 Your account has been banned.' });
+    if (!user.is_verified) return res.status(403).json({ error: 'Please verify your email first.', needsVerification: true, email: user.email });
 
     req.session.userId = user.id;
     req.session.username = user.username;
@@ -626,11 +706,16 @@ app.post('/api/chat', requireAuth, async (req, res) => {
 
 // ===== FRIENDS =====
 
-// Add is_banned column to users if not exists
-async function initBanColumn() {
+// Add is_banned and verification columns if not exists
+async function initUserColumns() {
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_code TEXT`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TIMESTAMP`);
+  // Make admin always verified
+  await db.query(`UPDATE users SET is_verified = TRUE WHERE email = '${ADMIN_EMAIL}'`);
 }
-initBanColumn().catch(() => {});
+initUserColumns().catch(() => {});
 
 // Add movie_data column to chat if not exists
 async function initChatMovieColumn() {
