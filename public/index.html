@@ -436,7 +436,19 @@
       </div>
 
       <div id="recommendedSection" style="display: none;">
-        <p id="recommendedSubtitle" style="color:#7a8a99; text-align:center; margin-bottom:20px;"></p>
+        <div class="filter-section">
+          <button onclick="loadRecommendations('top')"  class="filter-btn active" id="rec-filter-top">⭐ For You</button>
+          <button onclick="loadRecommendations('Action')"    class="filter-btn">Action</button>
+          <button onclick="loadRecommendations('Drama')"     class="filter-btn">Drama</button>
+          <button onclick="loadRecommendations('Comedy')"    class="filter-btn">Comedy</button>
+          <button onclick="loadRecommendations('Thriller')"  class="filter-btn">Thriller</button>
+          <button onclick="loadRecommendations('Horror')"    class="filter-btn">Horror</button>
+          <button onclick="loadRecommendations('Sci-Fi')"    class="filter-btn">Sci-Fi</button>
+          <button onclick="loadRecommendations('Romance')"   class="filter-btn">Romance</button>
+          <button onclick="loadRecommendations('Crime')"     class="filter-btn">Crime</button>
+          <button onclick="loadRecommendations('Animation')" class="filter-btn">Animation</button>
+        </div>
+        <p id="recommendedSubtitle" style="color:#7a8a99; text-align:center; margin-bottom:20px; margin-top:10px;"></p>
         <div class="movies-grid" id="recommendedContainer"></div>
       </div>
 

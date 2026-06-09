@@ -647,17 +647,76 @@ app.get('/api/quiz', requireAuth, async (req, res) => {
 });
 
 // ===== RECOMMENDATIONS =====
+// TMDB genre name → ID map (cached)
+const TMDB_GENRE_MAP = {
+  'Action': 28, 'Adventure': 12, 'Animation': 16, 'Comedy': 35,
+  'Crime': 80, 'Documentary': 99, 'Drama': 18, 'Family': 10751,
+  'Fantasy': 14, 'History': 36, 'Horror': 27, 'Music': 10402,
+  'Mystery': 9648, 'Romance': 10749, 'Sci-Fi': 878, 'Science Fiction': 878,
+  'Thriller': 53, 'War': 10752, 'Western': 37
+};
+
+async function fetchMoviesForGenre(genreId, watchedTitles, limit = 15) {
+  const movies = [];
+  let page = 1;
+  while (movies.length < limit && page <= 5) {
+    const res = await axios.get(`${TMDB_BASE}/discover/movie`, {
+      params: {
+        api_key: TMDB_API_KEY,
+        language: 'en-US',
+        sort_by: 'vote_average.desc',
+        'vote_count.gte': 500,
+        with_genres: genreId,
+        page
+      }
+    });
+    for (const m of res.data.results) {
+      if (movies.length >= limit) break;
+      if (!m.poster_path) continue;
+      if (watchedTitles.has(m.title.toLowerCase())) continue;
+      movies.push({
+        title: m.title,
+        year: m.release_date ? m.release_date.substring(0, 4) : 'N/A',
+        poster: TMDB_IMG + m.poster_path,
+        imdbRating: m.vote_average.toFixed(1),
+        overview: m.overview || ''
+      });
+    }
+    page++;
+  }
+  return movies;
+}
+
+// Get recommendations for a specific genre
+app.get('/api/recommendations/:genre', requireAuth, async (req, res) => {
+  try {
+    const genre = req.params.genre;
+    const watchedRes = await db.query('SELECT title FROM movies WHERE user_id=$1', [req.session.userId]);
+    const watchedTitles = new Set(watchedRes.rows.map(r => r.title.toLowerCase()));
+
+    // Find TMDB genre ID
+    let genreId = null;
+    for (const [name, id] of Object.entries(TMDB_GENRE_MAP)) {
+      if (name.toLowerCase() === genre.toLowerCase()) { genreId = id; break; }
+    }
+    if (!genreId) return res.status(400).json({ error: 'Unknown genre' });
+
+    const movies = await fetchMoviesForGenre(genreId, watchedTitles, 15);
+    res.json({ results: movies, genre });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
+  }
+});
+
+// Legacy: get recommendations based on user's top genre
 app.get('/api/recommendations', requireAuth, async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT title, genres FROM movies WHERE user_id = $1',
-      [req.session.userId]
-    );
-    const allWatched = result.rows;
-    const watchedTitles = new Set(allWatched.map(m => m.title.toLowerCase()));
+    const result = await db.query('SELECT genres FROM movies WHERE user_id=$1', [req.session.userId]);
+    const watchedRes = await db.query('SELECT title FROM movies WHERE user_id=$1', [req.session.userId]);
+    const watchedTitles = new Set(watchedRes.rows.map(r => r.title.toLowerCase()));
 
     const genreCount = {};
-    allWatched.forEach(row => {
+    result.rows.forEach(row => {
       if (!row.genres) return;
       row.genres.split(',').forEach(g => {
         const genre = g.trim();
@@ -666,47 +725,17 @@ app.get('/api/recommendations', requireAuth, async (req, res) => {
     });
 
     if (!Object.keys(genreCount).length) return res.json({ results: [], genre: null });
-
     const topGenre = Object.entries(genreCount).sort((a, b) => b[1] - a[1])[0][0];
 
-    // Use TMDB discover to find top movies in the user's top genre
-    const genreMapRes = await axios.get(`${TMDB_BASE}/genre/movie/list`, {
-      params: { api_key: TMDB_API_KEY, language: 'en-US' }
-    });
-    const genreObj = genreMapRes.data.genres.find(g =>
-      g.name.toLowerCase().includes(topGenre.toLowerCase()) ||
-      topGenre.toLowerCase().includes(g.name.toLowerCase())
-    );
-
-    const recommendations = [];
-    let page = 1;
-    while (recommendations.length < 6 && page <= 3) {
-      const discoverRes = await axios.get(`${TMDB_BASE}/discover/movie`, {
-        params: {
-          api_key: TMDB_API_KEY,
-          language: 'en-US',
-          sort_by: 'vote_average.desc',
-          'vote_count.gte': 1000,
-          with_genres: genreObj ? genreObj.id : undefined,
-          page
-        }
-      });
-      for (const m of discoverRes.data.results) {
-        if (recommendations.length >= 6) break;
-        if (!m.poster_path) continue;
-        if (watchedTitles.has(m.title.toLowerCase())) continue;
-        recommendations.push({
-          title: m.title,
-          year: m.release_date ? m.release_date.substring(0, 4) : 'N/A',
-          poster: TMDB_IMG + m.poster_path,
-          imdbRating: m.vote_average.toFixed(1),
-          genre: topGenre
-        });
+    let genreId = null;
+    for (const [name, id] of Object.entries(TMDB_GENRE_MAP)) {
+      if (name.toLowerCase() === topGenre.toLowerCase() || topGenre.toLowerCase().includes(name.toLowerCase())) {
+        genreId = id; break;
       }
-      page++;
     }
 
-    res.json({ results: recommendations, genre: topGenre });
+    const movies = await fetchMoviesForGenre(genreId || 28, watchedTitles, 15);
+    res.json({ results: movies, genre: topGenre });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch recommendations' });
   }

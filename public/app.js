@@ -1108,40 +1108,45 @@ function answerQuiz(chosen) {
 }
 
 // ===== RECOMMENDATIONS =====
-async function loadRecommendations() {
+async function loadRecommendations(genre = 'top') {
   const container = document.getElementById('recommendedContainer');
   const subtitle = document.getElementById('recommendedSubtitle');
-  container.innerHTML = `<div style="text-align:center; color:#aaa; padding: 40px; width:100%;">Finding movies you might like...</div>`;
+
+  // Update active filter button
+  document.querySelectorAll('#recommendedSection .filter-btn').forEach(b => b.classList.remove('active'));
+  if (event && event.target) event.target.classList.add('active');
+  else { const topBtn = document.getElementById('rec-filter-top'); if (topBtn) topBtn.classList.add('active'); }
+
+  container.innerHTML = `<div style="text-align:center; color:#aaa; padding:40px; width:100%;">Loading...</div>`;
 
   try {
-    const response = await fetch('/api/recommendations');
+    const url = genre === 'top' ? '/api/recommendations' : `/api/recommendations/${encodeURIComponent(genre)}`;
+    const response = await fetch(url);
     const data = await response.json();
 
     if (!data.results || data.results.length === 0) {
       subtitle.textContent = '';
-      container.innerHTML = `
-        <div class="empty-state">
-          <h2>${t('noRecommendations')}</h2>
-          <p>${t('noRecommendationsSub')}</p>
-        </div>`;
+      container.innerHTML = `<div class="empty-state"><h2>No recommendations found</h2><p>Try a different genre or add more movies to your list.</p></div>`;
       return;
     }
 
-    subtitle.textContent = t('topRatedSubtitle').replace('{genre}', data.genre);
+    subtitle.textContent = genre === 'top'
+      ? `Top-rated ${data.genre} movies you haven't seen yet`
+      : `Top-rated ${genre} movies you haven't seen yet`;
 
     container.innerHTML = data.results.map(movie => `
       <div class="movie-card">
-        <div class="poster-container" onclick="openRecommendedDetails('${movie.title.replace(/'/g, "\\'")}', '${movie.poster}', '${movie.genre}', '${movie.year}', '${movie.imdbRating}')">
-          <img src="${movie.poster}" alt="${movie.title}" class="poster">
+        <div class="poster-container" onclick="openRecommendedDetails('${movie.title.replace(/'/g, "\\'")}', '${movie.poster}', '${genre}', '${movie.year}', '${movie.imdbRating}')">
+          <img src="${movie.poster}" alt="${movie.title}" class="poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
           <div class="play-button">▶</div>
         </div>
         <div class="movie-info">
           <h3>${movie.title}</h3>
-          <p class="genre">${movie.genre}</p>
-          <p style="color:#ffd700; font-size:0.9em;">⭐ IMDb: ${movie.imdbRating}</p>
+          <p class="genre">${genre === 'top' ? data.genre : genre}</p>
+          <p style="color:#ffd700; font-size:0.9em;">⭐ ${movie.imdbRating}</p>
           <p style="color:#aaa; font-size:0.85em;">${movie.year}</p>
-          <div class="actions" style="margin-top: 10px;">
-            <button class="view-btn" onclick="openRecommendedDetails('${movie.title.replace(/'/g, "\\'")}', '${movie.poster}', '${movie.genre}', '${movie.year}', '${movie.imdbRating}')">View</button>
+          <div class="actions" style="margin-top:10px;">
+            <button class="view-btn" onclick="openRecommendedDetails('${movie.title.replace(/'/g, "\\'")}', '${movie.poster}', '${genre}', '${movie.year}', '${movie.imdbRating}')">View</button>
             <button class="delete-btn" onclick="addRecommendedToWatchlist('${movie.title.replace(/'/g, "\\'")}')">+ Watchlist</button>
           </div>
         </div>
