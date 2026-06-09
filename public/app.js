@@ -1265,8 +1265,9 @@ async function viewFriendMovies(friendId, username, avatar) {
 
     container.innerHTML = movies.map(movie => `
       <div class="movie-card">
-        <div class="poster-container">
+        <div class="poster-container" onclick="openFriendMovieDetails('${movie.title.replace(/'/g,"\\'")}', '${(movie.posterUrl||'').replace(/'/g,"\\'")}', '${(movie.genres||'').replace(/'/g,"\\'")}', '${movie.year||''}', '${movie.imdbRating||''}', '${movie.director||''}', '${(movie.mainCharacter||'').replace(/'/g,"\\'")}', '${movie.runtime||''}')">
           <img src="${movie.posterUrl}" alt="${movie.title}" class="poster">
+          <div class="play-button">▶</div>
         </div>
         <div class="movie-info">
           <h3>${movie.title}</h3>
@@ -1275,11 +1276,68 @@ async function viewFriendMovies(friendId, username, avatar) {
             <span class="stars">${'⭐'.repeat(movie.rating || 0)}</span>
             <span class="rating-number">${movie.rating || '?'}/5</span>
           </div>
+          <div class="actions" style="margin-top:8px;">
+            <button class="view-btn" onclick="openFriendMovieDetails('${movie.title.replace(/'/g,"\\'")}', '${(movie.posterUrl||'').replace(/'/g,"\\'")}', '${(movie.genres||'').replace(/'/g,"\\'")}', '${movie.year||''}', '${movie.imdbRating||''}', '${movie.director||''}', '${(movie.mainCharacter||'').replace(/'/g,"\\'")}', '${movie.runtime||''}')">▶ Trailer</button>
+            <button class="delete-btn" style="background:var(--green);color:#000;border-color:var(--green);" onclick="addFriendMovieToWatchlist('${movie.title.replace(/'/g,"\\'")}')">+ Watchlist</button>
+          </div>
         </div>
       </div>
     `).join('');
   } catch (e) {
     container.innerHTML = `<div class="empty-state"><h2>Failed to load movies</h2></div>`;
+  }
+}
+
+function openFriendMovieDetails(title, poster, genre, year, imdbRating, director, actor, runtime) {
+  // Close friend movies modal and open the main movie modal with trailer
+  document.getElementById('friendMoviesModal').classList.remove('active');
+
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalPoster').src = poster;
+  document.getElementById('modalGenre').textContent = genre || 'N/A';
+  document.getElementById('modalDirector').textContent = director || 'N/A';
+  document.getElementById('modalActor').textContent = actor || 'N/A';
+  document.getElementById('modalYear').textContent = year || 'N/A';
+  document.getElementById('modalIMDbRating').textContent = imdbRating || 'N/A';
+  document.getElementById('modalRuntime').textContent = runtime || 'N/A';
+  document.getElementById('modalPlot').textContent = 'Loading...';
+  document.getElementById('modalUserRating').innerHTML = '';
+  document.getElementById('modalUserNotes').innerHTML = '';
+
+  const modalActions = document.querySelector('.modal-actions');
+  modalActions.innerHTML = `
+    <button class="edit-btn" onclick="closeModal(); addFriendMovieToWatchlist('${title.replace(/'/g,"\\'")}')">+ Add to Watchlist</button>
+  `;
+
+  const trailerContainer = document.getElementById('trailerContainer');
+  trailerContainer.innerHTML = `<div style="background:var(--surface); padding:40px; border-radius:6px; border:1px solid var(--border); text-align:center;"><p style="color:var(--text-muted);">Loading trailer...</p></div>`;
+
+  fetch(`/api/trailer/${encodeURIComponent(title)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.videoId) {
+        trailerContainer.innerHTML = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${data.videoId}" allowfullscreen></iframe></div>`;
+      } else throw new Error();
+    })
+    .catch(() => {
+      trailerContainer.innerHTML = `<div style="background:var(--surface); padding:50px 30px; border-radius:6px; border:1px solid var(--border); text-align:center;"><h3 style="color:var(--text-muted);">🎬 Trailer Not Available</h3></div>`;
+    });
+
+  document.getElementById('movieModal').classList.add('active');
+}
+
+async function addFriendMovieToWatchlist(title) {
+  try {
+    const res = await fetch('/api/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movieName: title })
+    });
+    const data = await res.json();
+    if (res.ok) showAlert(`✅ "${title}" added to your Watch Later!`);
+    else showAlert('❌ ' + data.error);
+  } catch(e) {
+    showAlert('❌ Failed to add to watchlist');
   }
 }
 
