@@ -45,7 +45,7 @@ window.addEventListener('load', async function() {
   if (data.authenticated) {
     currentUserId = data.userId;
     currentIsAdmin = data.isAdmin || false;
-    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
     loadMovies();
   } else {
@@ -60,7 +60,7 @@ function showAuth() {
 
 function showApp() {
   document.getElementById('authPage').style.display = 'none';
-  document.getElementById('appPage').style.display = 'block';
+  document.getElementById('appPage').style.display = 'flex';
 }
 
 function togglePw(inputId, btn) {
@@ -120,7 +120,7 @@ async function submitVerify() {
 
     currentUserId = data.userId;
     currentIsAdmin = data.isAdmin || false;
-    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
     loadMovies();
   } catch (e) {
@@ -193,7 +193,7 @@ async function submitSignup(username, email, password) {
 
     currentUserId = data.userId;
     currentIsAdmin = data.isAdmin || false;
-    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showAlert('✅ Account created! Welcome ' + username);
     showApp();
     loadMovies();
@@ -229,7 +229,7 @@ async function handleLogin() {
 
     currentUserId = data.userId;
     currentIsAdmin = data.isAdmin || false;
-    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'inline-block';
+    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
     loadMovies();
   } catch (error) {
@@ -287,6 +287,18 @@ window.addEventListener('click', function(event) {
 });
 
 // ===== SECTION NAVIGATION =====
+const sectionNames = {
+  movies: '🎬 My Movies',
+  watchlist: '📋 Watch Later',
+  toprated: '⭐ Top Rated',
+  recommended: '🎯 Recommended',
+  quiz: '🎲 Quiz',
+  friends: '👥 Friends',
+  chat: '💬 Chat',
+  profile: '👤 Profile',
+  admin: '🛡️ Admin'
+};
+
 function showSection(section) {
   document.getElementById('moviesSection').style.display = 'none';
   document.getElementById('watchlistSection').style.display = 'none';
@@ -297,15 +309,14 @@ function showSection(section) {
   document.getElementById('friendsSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('adminSection').style.display = 'none';
-  document.getElementById('quizBtn').classList.remove('active');
-  document.getElementById('profileBtn').classList.remove('active');
-  document.getElementById('moviesBtn').classList.remove('active');
-  document.getElementById('watchlistBtn').classList.remove('active');
-  document.getElementById('topratedBtn').classList.remove('active');
-  document.getElementById('recommendedBtn').classList.remove('active');
-  document.getElementById('friendsBtn').classList.remove('active');
-  document.getElementById('chatBtn').classList.remove('active');
+
+  // Remove active from all sidebar buttons
+  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
   stopChatPolling();
+
+  // Update topbar title
+  const titleEl = document.getElementById('topbarSectionName');
+  if (titleEl) titleEl.textContent = sectionNames[section] || '';
 
   if (section === 'movies') {
     document.getElementById('moviesSection').style.display = 'block';
@@ -346,6 +357,8 @@ function showSection(section) {
     initChat();
   } else if (section === 'admin') {
     document.getElementById('adminSection').style.display = 'block';
+    const adminBtn = document.getElementById('adminBtn');
+    if (adminBtn) adminBtn.classList.add('active');
     loadAdminUsers();
     loadAdminChat();
   }

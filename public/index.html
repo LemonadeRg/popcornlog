@@ -73,44 +73,52 @@
 
   <!-- MAIN APP PAGE -->
   <div id="appPage" style="display: none;">
-    <div class="container">
-      <div class="app-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid #2c3440; padding-bottom:20px;">
-        <div>
-          <div style="display:flex; align-items:center; gap:14px;">
-            <img src="logo.svg" alt="PopcornLog" class="app-logo" style="width:64px; height:64px; cursor:pointer;" onclick="showSection('movies')">
-            <div>
-              <h1 class="app-title" style="font-size:1.5em; letter-spacing:3px; color:var(--text); text-align:left; margin-bottom:2px;">PopcornLog</h1>
-              <p class="tagline" style="text-align:left; margin-bottom:0;" data-i18n="tagline">Track films you've watched.</p>
-            </div>
-          </div>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-logo" onclick="showSection('movies')">
+        <img src="logo.svg" alt="PopcornLog" style="width:34px;height:34px;">
+      </div>
+
+      <button onclick="showSection('movies')" id="moviesBtn" class="sidebar-btn active" title="My Movies">🎬<span class="sidebar-tooltip">My Movies</span></button>
+      <button onclick="showSection('watchlist')" id="watchlistBtn" class="sidebar-btn" title="Watch Later">📋<span class="sidebar-tooltip">Watch Later</span></button>
+      <button onclick="showSection('toprated')" id="topratedBtn" class="sidebar-btn" title="Top Rated">⭐<span class="sidebar-tooltip">Top Rated</span></button>
+      <button onclick="showSection('recommended')" id="recommendedBtn" class="sidebar-btn" title="Recommended">🎯<span class="sidebar-tooltip">Recommended</span></button>
+      <button onclick="showSection('quiz')" id="quizBtn" class="sidebar-btn" title="Quiz">🎲<span class="sidebar-tooltip">Quiz</span></button>
+
+      <div class="sidebar-divider"></div>
+
+      <button onclick="showSection('friends')" id="friendsBtn" class="sidebar-btn" title="Friends">👥<span class="sidebar-tooltip">Friends</span></button>
+      <button onclick="showSection('chat')" id="chatBtn" class="sidebar-btn" title="Chat">💬<span class="sidebar-tooltip">Chat</span></button>
+
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-divider"></div>
+
+      <button onclick="showSection('profile')" id="profileBtn" class="sidebar-btn" title="Profile">👤<span class="sidebar-tooltip">Profile</span></button>
+      <button id="adminBtn" onclick="showSection('admin')" class="sidebar-btn sidebar-btn-admin" title="Admin" style="display:none;">🛡️<span class="sidebar-tooltip">Admin</span></button>
+      <button onclick="handleLogout()" class="sidebar-btn sidebar-btn-signout" title="Sign Out">🚪<span class="sidebar-tooltip">Sign Out</span></button>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div class="app-main">
+      <!-- Topbar -->
+      <div class="app-topbar">
+        <div class="app-topbar-title">
+          <span id="topbarSectionName">My Movies</span>
         </div>
-        <div class="header-controls" style="display:flex; align-items:center; gap:12px;">
-          <!-- Language Switcher (app) -->
-          <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
+        <div class="app-topbar-controls">
+          <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
             <option value="en">🌐 EN</option>
             <option value="fr">🌐 FR</option>
             <option value="ar">🌐 AR</option>
           </select>
-          <!-- Theme Toggle -->
-          <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em; transition:all 0.2s;" title="Toggle light/dark mode">🌙</button>
-          <button id="adminBtn" onclick="showSection('admin')" style="display:none; padding:8px 14px; background:transparent; color:#e84040; border:1px solid #e84040; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;">🛡️</button>
-          <button onclick="showSection('profile')" id="profileBtn" style="padding:8px 18px; background:transparent; color:var(--text-dim); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">👤</button>
-          <button onclick="handleLogout()" data-i18n="signOut"
-            style="padding:8px 18px; background:transparent; color:#7a8a99; border:1px solid #2c3440; border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;"
-            onmouseover="this.style.borderColor='#e84040';this.style.color='#e84040'"
-            onmouseout="this.style.borderColor='#2c3440';this.style.color='#7a8a99'">Sign Out</button>
+          <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em;" title="Toggle light/dark mode">🌙</button>
         </div>
       </div>
 
-      <div class="nav-tabs" style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <button onclick="showSection('movies')" id="moviesBtn" class="section-btn active" data-i18n="myMovies">🎬 My Movies</button>
-        <button onclick="showSection('watchlist')" id="watchlistBtn" class="section-btn" data-i18n="watchLater">📋 Watch Later</button>
-        <button onclick="showSection('toprated')" id="topratedBtn" class="section-btn" data-i18n="topRated">⭐ Top Rated</button>
-        <button onclick="showSection('recommended')" id="recommendedBtn" class="section-btn" data-i18n="recommended">🎯 Recommended</button>
-        <button onclick="showSection('quiz')" id="quizBtn" class="section-btn">🎬 Quiz</button>
-        <button onclick="showSection('friends')" id="friendsBtn" class="section-btn">👥 Friends</button>
-        <button onclick="showSection('chat')" id="chatBtn" class="section-btn">💬 Chat</button>
-      </div>
+      <!-- Scrollable content -->
+      <div class="app-content">
+        <div class="container">
 
       <div id="moviesSection">
         <div class="add-movie-section">
@@ -447,7 +455,10 @@
         </div>
         <div class="movies-grid" id="watchlistContainer"></div>
       </div>
-    </div>
+
+        </div><!-- /.container -->
+      </div><!-- /.app-content -->
+    </div><!-- /.app-main -->
 
     <!-- Rating Modal -->
     <div class="modal" id="ratingModal">
@@ -535,7 +546,8 @@
         </div>
       </div>
     </div>
-  </div>
+
+  </div><!-- /#appPage -->
 
   <!-- Alert Modal -->
   <div class="modal" id="alertModal">
