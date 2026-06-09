@@ -767,6 +767,59 @@ app.delete('/api/friends/:userId', requireAuth, async (req, res) => {
   }
 });
 
+// View a friend's profile
+app.get('/api/friends/:userId/profile', requireAuth, async (req, res) => {
+  const friendId = parseInt(req.params.userId);
+  try {
+    const check = await db.query(
+      `SELECT id FROM friend_requests
+       WHERE ((from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1))
+       AND status='accepted'`,
+      [req.session.userId, friendId]
+    );
+    if (check.rows.length === 0) return res.status(403).json({ error: 'Not friends' });
+
+    const userRes = await db.query(
+      'SELECT id, username, avatar, bio, created_at FROM users WHERE id=$1',
+      [friendId]
+    );
+    const user = userRes.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const statsRes = await db.query(
+      'SELECT COUNT(*) as total, AVG(rating) as avg_rating FROM movies WHERE user_id=$1',
+      [friendId]
+    );
+    const wlRes = await db.query(
+      'SELECT COUNT(*) as count FROM watchlist WHERE user_id=$1',
+      [friendId]
+    );
+    const topRes = await db.query(
+      'SELECT COUNT(*) as count FROM movies WHERE user_id=$1 AND rating=5',
+      [friendId]
+    );
+    const recentRes = await db.query(
+      'SELECT title, "posterUrl", rating FROM movies WHERE user_id=$1 ORDER BY created_at DESC LIMIT 4',
+      [friendId]
+    );
+
+    const stats = statsRes.rows[0];
+    res.json({
+      username: user.username,
+      avatar: user.avatar || '🎬',
+      bio: user.bio || '',
+      joinDate: user.created_at,
+      totalMovies: parseInt(stats.total) || 0,
+      avgRating: stats.avg_rating ? parseFloat(stats.avg_rating).toFixed(1) : 'N/A',
+      watchlistCount: parseInt(wlRes.rows[0].count) || 0,
+      topRatedCount: parseInt(topRes.rows[0].count) || 0,
+      recentMovies: recentRes.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // View a friend's movies
 app.get('/api/friends/:userId/movies', requireAuth, async (req, res) => {
   const friendId = parseInt(req.params.userId);

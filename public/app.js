@@ -1232,12 +1232,16 @@ async function loadFriends() {
           </div>
         </div>
         <div style="display:flex; gap:8px;">
-          <button onclick="viewFriendMovies(${f.id}, '${f.username}', '${f.avatar || '🎬'}')"
-            style="padding:7px 16px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.82em; font-family:inherit; transition:all 0.2s;"
+          <button onclick="viewFriendProfile(${f.id}, '${f.username}')"
+            style="padding:7px 14px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.82em; font-family:inherit; transition:all 0.2s;"
             onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
-            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">🎬 View Movies</button>
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">👤 Profile</button>
+          <button onclick="viewFriendMovies(${f.id}, '${f.username}', '${f.avatar || '🎬'}')"
+            style="padding:7px 14px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.82em; font-family:inherit; transition:all 0.2s;"
+            onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">🎬 Movies</button>
           <button onclick="removeFriend(${f.id}, '${f.username}')"
-            style="padding:7px 14px; background:transparent; color:var(--text-muted); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:0.82em; font-family:inherit;"
+            style="padding:7px 10px; background:transparent; color:var(--text-muted); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:0.82em; font-family:inherit;"
             onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
             onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Remove</button>
         </div>
@@ -1679,3 +1683,75 @@ async function deleteAdminMessage(msgId, btn) {
     }
   });
 }
+
+// ===== FRIEND PROFILE =====
+async function viewFriendProfile(friendId, username) {
+  document.getElementById('friendProfileTitle').textContent = `${username}'s Profile`;
+  document.getElementById('friendProfileModal').classList.add('active');
+
+  // Reset
+  document.getElementById('fpAvatar').textContent = '⏳';
+  document.getElementById('fpUsername').textContent = username;
+  document.getElementById('fpJoinDate').textContent = '';
+  document.getElementById('fpBio').textContent = '';
+  document.getElementById('fpBioBox').style.display = 'none';
+  document.getElementById('fpMovies').textContent = '...';
+  document.getElementById('fpAvgRating').textContent = '...';
+  document.getElementById('fpWatchlist').textContent = '...';
+  document.getElementById('fpTopRated').textContent = '...';
+  document.getElementById('fpRecentMovies').innerHTML = '';
+
+  try {
+    const res = await fetch(`/api/friends/${friendId}/profile`);
+    const d = await res.json();
+    if (!res.ok) { showAlert('❌ ' + d.error); closeFriendProfile(); return; }
+
+    document.getElementById('fpAvatar').textContent = d.avatar;
+    document.getElementById('fpUsername').textContent = d.username;
+    document.getElementById('fpJoinDate').textContent = `Member since ${new Date(d.joinDate).toLocaleDateString('en-US', { year:'numeric', month:'long' })}`;
+
+    if (d.bio) {
+      document.getElementById('fpBio').textContent = d.bio;
+      document.getElementById('fpBioBox').style.display = 'block';
+    }
+
+    document.getElementById('fpMovies').textContent = d.totalMovies;
+    document.getElementById('fpAvgRating').textContent = d.avgRating;
+    document.getElementById('fpWatchlist').textContent = d.watchlistCount;
+    document.getElementById('fpTopRated').textContent = d.topRatedCount;
+
+    // Recent movies posters
+    const recentEl = document.getElementById('fpRecentMovies');
+    if (d.recentMovies.length === 0) {
+      recentEl.innerHTML = `<p style="color:var(--text-muted); font-size:0.85em;">No movies yet</p>`;
+    } else {
+      recentEl.innerHTML = d.recentMovies.map(m => `
+        <div style="text-align:center;">
+          <img src="${m.posterUrl}" alt="${m.title}"
+            style="width:58px; height:84px; object-fit:cover; border-radius:4px; border:2px solid var(--border);"
+            onerror="this.style.display='none'" title="${m.title}">
+          <div style="font-size:0.7em; color:var(--text-muted); margin-top:4px;">${'⭐'.repeat(m.rating||0)}</div>
+        </div>
+      `).join('');
+    }
+
+    // Wire up "View All Movies" button
+    document.getElementById('fpViewMoviesBtn').onclick = () => {
+      closeFriendProfile();
+      viewFriendMovies(friendId, d.username, d.avatar);
+    };
+
+  } catch(e) {
+    showAlert('❌ Failed to load profile');
+    closeFriendProfile();
+  }
+}
+
+function closeFriendProfile() {
+  document.getElementById('friendProfileModal').classList.remove('active');
+}
+
+window.addEventListener('click', function(e) {
+  const fp = document.getElementById('friendProfileModal');
+  if (fp && e.target === fp) closeFriendProfile();
+});

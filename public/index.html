@@ -322,6 +322,54 @@
         </div>
       </div>
 
+      <!-- FRIEND PROFILE MODAL -->
+      <div class="modal" id="friendProfileModal">
+        <div class="modal-content" style="max-width:480px;">
+          <div class="modal-header">
+            <h2 class="modal-title" id="friendProfileTitle">Profile</h2>
+            <button class="close-btn" onclick="closeFriendProfile()">&times;</button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <!-- Avatar + name -->
+            <div style="text-align:center; margin-bottom:24px;">
+              <div id="fpAvatar" style="font-size:4em; margin-bottom:8px;"></div>
+              <h2 id="fpUsername" style="color:var(--text); font-size:1.4em; margin-bottom:4px;"></h2>
+              <p id="fpJoinDate" style="color:var(--text-muted); font-size:0.78em; text-transform:uppercase; letter-spacing:1px;"></p>
+            </div>
+            <!-- Bio -->
+            <div id="fpBioBox" style="background:var(--surface2); border-radius:6px; padding:14px; margin-bottom:20px; display:none;">
+              <p id="fpBio" style="color:var(--text-dim); font-size:0.92em; line-height:1.6;"></p>
+            </div>
+            <!-- Stats -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:24px;">
+              <div style="background:var(--surface2); border-radius:6px; padding:14px; text-align:center;">
+                <div id="fpMovies" style="font-size:1.6em; font-weight:800; color:var(--green);"></div>
+                <div style="font-size:0.7em; color:var(--text-muted); text-transform:uppercase; margin-top:4px;">Movies</div>
+              </div>
+              <div style="background:var(--surface2); border-radius:6px; padding:14px; text-align:center;">
+                <div id="fpAvgRating" style="font-size:1.6em; font-weight:800; color:var(--green);"></div>
+                <div style="font-size:0.7em; color:var(--text-muted); text-transform:uppercase; margin-top:4px;">Avg ⭐</div>
+              </div>
+              <div style="background:var(--surface2); border-radius:6px; padding:14px; text-align:center;">
+                <div id="fpWatchlist" style="font-size:1.6em; font-weight:800; color:var(--green);"></div>
+                <div style="font-size:0.7em; color:var(--text-muted); text-transform:uppercase; margin-top:4px;">Watchlist</div>
+              </div>
+              <div style="background:var(--surface2); border-radius:6px; padding:14px; text-align:center;">
+                <div id="fpTopRated" style="font-size:1.6em; font-weight:800; color:var(--green);"></div>
+                <div style="font-size:0.7em; color:var(--text-muted); text-transform:uppercase; margin-top:4px;">5 ⭐</div>
+              </div>
+            </div>
+            <!-- Recent movies -->
+            <div>
+              <p style="color:var(--text-muted); font-size:0.78em; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Recently Watched</p>
+              <div id="fpRecentMovies" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+            </div>
+            <!-- View movies button -->
+            <button id="fpViewMoviesBtn" onclick="" style="width:100%; margin-top:20px; padding:11px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.9em; font-family:inherit; text-transform:uppercase; letter-spacing:1px;">🎬 View All Movies</button>
+          </div>
+        </div>
+      </div>
+
       <!-- FRIEND MOVIES MODAL -->
       <div class="modal" id="friendMoviesModal">
         <div class="modal-content" style="max-width:860px;">
