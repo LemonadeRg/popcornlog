@@ -68,17 +68,17 @@
   <!-- MAIN APP PAGE -->
   <div id="appPage" style="display: none;">
     <div class="container">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid #2c3440; padding-bottom:20px;">
+      <div class="app-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid #2c3440; padding-bottom:20px;">
         <div>
           <div style="display:flex; align-items:center; gap:14px;">
-            <img src="logo.svg" alt="PopcornLog" style="width:64px; height:64px; cursor:pointer;" onclick="showSection('movies')">
+            <img src="logo.svg" alt="PopcornLog" class="app-logo" style="width:64px; height:64px; cursor:pointer;" onclick="showSection('movies')">
             <div>
-              <h1 style="font-size:1.5em; letter-spacing:3px; color:var(--text); text-align:left; margin-bottom:2px;">PopcornLog</h1>
+              <h1 class="app-title" style="font-size:1.5em; letter-spacing:3px; color:var(--text); text-align:left; margin-bottom:2px;">PopcornLog</h1>
               <p class="tagline" style="text-align:left; margin-bottom:0;" data-i18n="tagline">Track films you've watched.</p>
             </div>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div class="header-controls" style="display:flex; align-items:center; gap:12px;">
           <!-- Language Switcher (app) -->
           <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
             <option value="en">🌐 EN</option>
@@ -87,7 +87,7 @@
           </select>
           <!-- Theme Toggle -->
           <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em; transition:all 0.2s;" title="Toggle light/dark mode">🌙</button>
-          <button onclick="showSection('profile')" id="profileBtn" style="padding:8px 18px; background:transparent; color:var(--text-dim); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">👤 Profile</button>
+          <button onclick="showSection('profile')" id="profileBtn" style="padding:8px 18px; background:transparent; color:var(--text-dim); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">👤</button>
           <button onclick="handleLogout()" data-i18n="signOut"
             style="padding:8px 18px; background:transparent; color:#7a8a99; border:1px solid #2c3440; border-radius:4px; cursor:pointer; font-weight:600; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all 0.2s;"
             onmouseover="this.style.borderColor='#e84040';this.style.color='#e84040'"
@@ -95,7 +95,7 @@
         </div>
       </div>
 
-      <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap;">
+      <div class="nav-tabs" style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap;">
         <button onclick="showSection('movies')" id="moviesBtn" class="section-btn active" data-i18n="myMovies">🎬 My Movies</button>
         <button onclick="showSection('watchlist')" id="watchlistBtn" class="section-btn" data-i18n="watchLater">📋 Watch Later</button>
         <button onclick="showSection('toprated')" id="topratedBtn" class="section-btn" data-i18n="topRated">⭐ Top Rated</button>

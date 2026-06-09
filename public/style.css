@@ -905,3 +905,137 @@ h1 {
     font-size: 1.3em;
   }
 }
+
+/* ===== MOBILE ===== */
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+
+  .container {
+    padding: 12px;
+  }
+
+  /* Header: stack logo+title on left, controls on right but smaller */
+  .app-header-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Logo smaller on mobile */
+  .app-logo {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Hide tagline on mobile to save space */
+  .tagline {
+    display: none;
+  }
+
+  /* Header title smaller */
+  .app-title {
+    font-size: 1.1em !important;
+  }
+
+  /* Header controls: shrink buttons */
+  .header-controls {
+    gap: 6px !important;
+  }
+
+  .header-controls select,
+  .header-controls button {
+    padding: 5px 8px !important;
+    font-size: 0.75em !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* Nav tabs: scroll horizontally instead of wrapping */
+  .nav-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.78em !important;
+    padding: 7px 12px !important;
+  }
+
+  /* Add movie row: stack vertically */
+  .add-movie-section {
+    flex-direction: column;
+  }
+
+  .search-wrapper {
+    width: 100%;
+  }
+
+  #movieInput {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Movie grid: 2 columns on mobile */
+  .movies-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* Watchlist input row */
+  .watchlist-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .watchlist-input-row input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Modal full screen on mobile */
+  .modal-content {
+    width: 96% !important;
+    margin: 6px auto !important;
+    padding: 16px !important;
+  }
+
+  .movie-details {
+    grid-template-columns: 1fr;
+  }
+
+  .poster-large {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+  }
+
+  /* Quiz */
+  .quiz-options {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Profile */
+  .profile-card {
+    padding: 16px !important;
+  }
+
+  /* Recommendations grid */
+  .rec-grid, .recommended-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+}
