@@ -1769,6 +1769,7 @@ function openGame(type) {
     loadBattle();
   } else if (type === 'poster') {
     document.getElementById('gamePoster').style.display = 'block';
+    posterUsedTitles = [];
     loadPosterGame();
   }
 }
@@ -1872,6 +1873,7 @@ let posterData = null;
 let posterHintsUsed = 0;
 let posterBlurLevel = 20;
 let posterAnswered = false;
+let posterUsedTitles = [];
 
 async function loadPosterGame() {
   const arena = document.getElementById('posterArena');
@@ -1880,8 +1882,16 @@ async function loadPosterGame() {
   posterBlurLevel = 20;
   posterAnswered = false;
   try {
-    const res = await fetch('/api/games/poster');
+    const params = posterUsedTitles.length ? '?exclude=' + encodeURIComponent(JSON.stringify(posterUsedTitles)) : '';
+    const res = await fetch('/api/games/poster' + params);
+    if (!res.ok) {
+      const d = await res.json();
+      arena.innerHTML = `<div style="color:var(--text-muted);padding:20px;text-align:center;">${d.error || 'Failed to load.'}</div>`;
+      return;
+    }
     posterData = await res.json();
+    if (posterData.reset) posterUsedTitles = [];
+    posterUsedTitles.push(posterData.answer);
     renderPosterGame();
   } catch(e) {
     arena.innerHTML = `<div style="color:var(--text-muted);padding:20px;">Failed to load poster.</div>`;

@@ -1043,26 +1043,25 @@ app.post('/api/games/battle/vote', requireAuth, async (req, res) => {
 });
 
 // Guess The Poster — get a random TMDB movie with cast info
-app.get('/api/games/poster', async (req, res) => {
+app.get('/api/games/poster', requireAuth, async (req, res) => {
   try {
-    const page = Math.floor(Math.random() * 10) + 1;
-    const r = await fetch(`${TMDB_BASE}/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`);
-    const data = await r.json();
-    const pool = (data.results || []).filter(m => m.poster_path && m.overview);
+    const exclude = req.query.exclude ? JSON.parse(req.query.exclude) : [];
+    const result = await db.query(
+      `SELECT title, "posterUrl", year, genres, "mainCharacter", director
+       FROM movies WHERE user_id=$1 AND "posterUrl" IS NOT NULL AND "posterUrl" != '' AND "posterUrl" != 'N/A'`,
+      [req.session.userId]
+    );
+    let pool = result.rows.filter(m => !exclude.includes(m.title));
+    if (pool.length === 0) pool = result.rows; // reset if all used
+    if (pool.length === 0) return res.status(400).json({ error: 'Add at least 1 movie with a poster to play!' });
     const movie = pool[Math.floor(Math.random() * pool.length)];
-    // Get cast
-    const credits = await fetch(`${TMDB_BASE}/movie/${movie.id}/credits?api_key=${TMDB_API_KEY}`);
-    const cdata = await credits.json();
-    const lead = cdata.cast?.[0]?.name || 'Unknown';
-    const genres = movie.genre_ids?.slice(0,2) || [];
-    const genreNames = { 28:'Action',35:'Comedy',18:'Drama',27:'Horror',878:'Sci-Fi',53:'Thriller',10749:'Romance',80:'Crime',14:'Fantasy',12:'Adventure' };
     res.json({
-      poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+      poster: movie.posterUrl,
       answer: movie.title,
-      year: movie.release_date?.slice(0,4),
-      genre: genres.map(g => genreNames[g] || '').filter(Boolean).join(', ') || 'Drama',
-      lead,
-      rating: movie.vote_average?.toFixed(1)
+      year: movie.year || '?',
+      genre: movie.genres || 'Unknown',
+      lead: movie.mainCharacter || movie.director || 'Unknown',
+      reset: pool.length === result.rows.length && exclude.length > 0
     });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
