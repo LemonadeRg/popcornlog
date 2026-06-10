@@ -1512,8 +1512,8 @@ async function loadProfile() {
     // Active badge
     const badgeEl = document.getElementById('profileActiveBadge');
     if (data.activeBadge && badgeEl) {
-      badgeEl.textContent = data.activeBadge;
-      badgeEl.style.display = 'block';
+      badgeEl.textContent = BADGE_EMOJI[data.activeBadge] || '';
+      badgeEl.style.display = badgeEl.textContent ? 'block' : 'none';
     }
 
     // Favorite movie display
@@ -1704,12 +1704,20 @@ const LEVEL_AVATARS = [
   { emoji: '🌠', level: 25, label: 'Star Lord' },
 ];
 
+// Badge ID → emoji map (mirrors server BADGES object)
+const BADGE_EMOJI = {
+  first_movie: '🎬', movie_buff: '🍿', cinephile: '🏆', film_fanatic: '🌟',
+  the_critic: '⭐', planner: '📋', social: '👥', chatter: '💬',
+  explorer: '🗺️', quiz_master: '🎲'
+};
+
 // Helper: render avatar + badge bubble together
-function avatarWithBadge(avatar, activeBadge, size = '1.6em') {
-  if (!activeBadge) return `<span style="font-size:${size};">${avatar || '🎬'}</span>`;
+function avatarWithBadge(avatar, activeBadgeId, size = '1.6em') {
+  const badgeEmoji = activeBadgeId ? (BADGE_EMOJI[activeBadgeId] || null) : null;
+  if (!badgeEmoji) return `<span style="font-size:${size};">${avatar || '🎬'}</span>`;
   return `<span style="position:relative;display:inline-block;">
     <span style="font-size:${size};">${avatar || '🎬'}</span>
-    <span style="position:absolute;bottom:-3px;right:-6px;font-size:calc(${size} * 0.55);line-height:1;">${activeBadge}</span>
+    <span style="position:absolute;bottom:-3px;right:-6px;font-size:calc(${size} * 0.55);line-height:1;">${badgeEmoji}</span>
   </span>`;
 }
 
