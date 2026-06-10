@@ -48,7 +48,7 @@ window.addEventListener('load', async function() {
     if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
     loadMovies();
-    showSection('home');
+    await showSection('home');
   } else {
     showAuth();
   }
@@ -518,11 +518,8 @@ function showSectionEl(id) {
 
 // ===== HOME PAGE =====
 async function loadHome() {
-  loadHomeStats();
-  loadLeaderboard();
-  loadHomeFeed();
-  loadHomeTrending();
   document.getElementById('moodResult').style.display = 'none';
+  await Promise.all([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
 }
 
 async function loadHomeStats() {
@@ -666,7 +663,7 @@ const sectionNames = {
   admin: '🛡️ Admin'
 };
 
-function showSection(section) {
+async function showSection(section) {
   document.getElementById('homeSection').style.display = 'none';
   document.getElementById('moviesSection').style.display = 'none';
   document.getElementById('watchlistSection').style.display = 'none';
@@ -689,7 +686,7 @@ function showSection(section) {
   if (section === 'home') {
     showSectionEl('homeSection');
     document.getElementById('homeBtn').classList.add('active');
-    loadHome();
+    await loadHome();
   } else if (section === 'movies') {
     showSectionEl('moviesSection');
     document.getElementById('moviesBtn').classList.add('active');
