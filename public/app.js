@@ -915,9 +915,11 @@ async function addMovie() {
         }),
       });
 
-      if (!response.ok) throw new Error('Movie not found');
-
       const data = await response.json();
+      if (!response.ok) {
+        showAlert('❌ ' + (data.error || 'Movie not found'));
+        return;
+      }
       handleNewBadges(data.newBadges);
       document.getElementById('movieInput').value = '';
       loadMovies();

@@ -522,6 +522,13 @@ app.post('/api/movies', requireAuth, async (req, res) => {
     const movie = await tmdbFetchByTitle(movieName);
     if (!movie) return res.status(404).json({ error: 'Movie not found' });
 
+    // Check for duplicate (case-insensitive) before inserting
+    const dup = await db.query(
+      'SELECT id FROM movies WHERE user_id=$1 AND LOWER(title)=LOWER($2)',
+      [req.session.userId, movie.title]
+    );
+    if (dup.rows.length > 0) return res.status(400).json({ error: 'You already have this movie in your list' });
+
     await db.query(
       `INSERT INTO movies (user_id, title, genres, director, "mainCharacter", year, "imdbRating", runtime, "posterUrl", plot, rating, "userNotes")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
