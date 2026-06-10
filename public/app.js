@@ -1,5 +1,21 @@
 console.log('✅ app.js loaded successfully');
 
+// Load live movie posters into auth background
+(async function loadAuthBackground() {
+  try {
+    const res = await fetch('/api/home/trending');
+    if (!res.ok) return;
+    const movies = await res.json();
+    const overlay = document.getElementById('authBgOverlay');
+    if (!overlay) return;
+    // Use up to 8 posters
+    const posters = movies.filter(m => m.poster).slice(0, 8);
+    overlay.innerHTML = posters.map(m =>
+      `<img src="${m.poster}" alt="" loading="lazy">`
+    ).join('');
+  } catch(e) {}
+})();
+
 // ===== THEME =====
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');

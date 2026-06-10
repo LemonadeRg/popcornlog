@@ -343,7 +343,7 @@ app.get('/api/home/feed', requireAuth, async (req, res) => {
 });
 
 // Home page: trending from TMDB
-app.get('/api/home/trending', requireAuth, async (req, res) => {
+app.get('/api/home/trending', async (req, res) => { // public — used for auth page background
   try {
     const r = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}&language=en-US`);
     const data = await r.json();
