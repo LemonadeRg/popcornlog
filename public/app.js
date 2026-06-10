@@ -517,13 +517,19 @@ function showSectionEl(id) {
 }
 
 // ===== HOME PAGE =====
-async function loadHome() {
+async function loadHome(retry = true) {
   document.getElementById('moodResult').style.display = 'none';
-  // Run all independently so one failure doesn't blank the whole page
-  loadHomeStats();
-  loadLeaderboard();
-  loadHomeFeed();
-  loadHomeTrending();
+  await Promise.all([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
+  // If leaderboard or trending still empty after first load (cold server), retry once
+  if (retry) {
+    setTimeout(async () => {
+      const podium = document.getElementById('leaderboardPodium');
+      const trending = document.getElementById('homeTrending');
+      if (!podium?.children.length || !trending?.children.length) {
+        await loadHome(false);
+      }
+    }, 1500);
+  }
 }
 
 async function loadHomeStats() {
