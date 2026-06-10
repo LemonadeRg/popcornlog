@@ -1498,9 +1498,9 @@ async function loadProfile() {
     const joined = new Date(data.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('profileJoinDate').textContent = `Member since ${joined}`;
 
-    // Banner
+    // Banner — use fav movie poster if available, else color
     currentBannerColor = data.bannerColor || '#1c2228';
-    applyBanner(currentBannerColor);
+    applyBanner(currentBannerColor, data.favoriteMovie?.posterUrl || null);
 
     // Active badge
     const badgeEl = document.getElementById('profileActiveBadge');
@@ -1517,6 +1517,12 @@ async function loadProfile() {
     if (sel) {
       sel.innerHTML = '<option value="">— None —</option>' +
         (allMovies || []).map(m => `<option value="${m.id}" ${data.favoriteMovie?.id === m.id ? 'selected' : ''}>${m.title}${m.year ? ' ('+m.year+')' : ''}</option>`).join('');
+      // Live banner preview when dropdown changes
+      sel.onchange = () => {
+        const picked = (allMovies||[]).find(m => m.id == sel.value);
+        applyBanner(currentBannerColor, picked?.posterUrl || null);
+        renderFavMovie(picked ? { id: picked.id, title: picked.title, posterUrl: picked.posterUrl, year: picked.year, rating: picked.rating, genres: picked.genres } : null);
+      };
     }
 
     loadBadges();
@@ -1525,12 +1531,21 @@ async function loadProfile() {
   }
 }
 
-function applyBanner(color) {
+function applyBanner(color, posterUrl) {
   const banner = document.getElementById('profileBanner');
   if (!banner) return;
-  // Gradient from chosen color to slightly lighter
-  banner.style.background = `linear-gradient(135deg, ${color} 0%, ${color}cc 60%, #E8B84B22 100%)`;
-  // Show/hide edit hint on hover
+  if (posterUrl) {
+    // Movie poster as banner with dark gradient overlay so text stays readable
+    banner.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 100%), url('${posterUrl}')`;
+    banner.style.backgroundSize = 'cover';
+    banner.style.backgroundPosition = 'center top';
+    banner.style.backgroundColor = '';
+  } else {
+    banner.style.backgroundImage = `linear-gradient(135deg, ${color} 0%, ${color}cc 60%, #E8B84B22 100%)`;
+    banner.style.backgroundSize = '';
+    banner.style.backgroundPosition = '';
+    banner.style.backgroundColor = color;
+  }
   banner.onmouseenter = () => { const h = banner.querySelector('.banner-edit-hint'); if(h) h.style.opacity='1'; };
   banner.onmouseleave = () => { const h = banner.querySelector('.banner-edit-hint'); if(h) h.style.opacity='0'; };
 }
@@ -1571,7 +1586,8 @@ function closeBannerPicker() {
 
 function selectBanner(color) {
   currentBannerColor = color;
-  applyBanner(color);
+  // When user picks a color, clear the movie poster from banner
+  applyBanner(color, null);
   closeBannerPicker();
 }
 
@@ -1587,10 +1603,9 @@ async function saveProfile() {
   });
   const data = await res.json();
   if (res.ok) {
-    // Update favorite movie display
-    const selEl = document.getElementById('favMovieSelect');
     const selMovie = favoriteMovieId ? (allMovies||[]).find(m => m.id == favoriteMovieId) : null;
     renderFavMovie(selMovie ? { id: selMovie.id, title: selMovie.title, posterUrl: selMovie.posterUrl, year: selMovie.year, rating: selMovie.rating, genres: selMovie.genres } : null);
+    applyBanner(currentBannerColor, selMovie?.posterUrl || null);
     showAlert('✅ Profile saved!');
   } else {
     showAlert('❌ ' + data.error);
