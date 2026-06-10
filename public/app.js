@@ -519,6 +519,7 @@ function showSectionEl(id) {
 // ===== HOME PAGE =====
 async function loadHome() {
   loadHomeStats();
+  loadLeaderboard();
   loadHomeFeed();
   loadHomeTrending();
   document.getElementById('moodResult').style.display = 'none';
@@ -777,7 +778,6 @@ async function loadMovies() {
   } catch (error) {
     console.error('Error loading movies:', error);
   }
-  loadLeaderboard();
 }
 
 async function loadLeaderboard() {

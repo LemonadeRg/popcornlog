@@ -295,9 +295,9 @@ app.get('/api/home/stats', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const [moviesRes, ratingsRes, genreRes, streakRes] = await Promise.all([
-      db.query(`SELECT COUNT(*) as total, COALESCE(SUM(runtime), 0) as minutes FROM movies WHERE user_id=$1`, [userId]),
-      db.query(`SELECT ROUND(AVG(rating),1) as avg_rating FROM movies WHERE user_id=$1 AND rating > 0`, [userId]),
-      db.query(`SELECT genre, COUNT(*) as cnt FROM movies WHERE user_id=$1 AND genre IS NOT NULL AND genre != '' GROUP BY genre ORDER BY cnt DESC LIMIT 1`, [userId]),
+      db.query(`SELECT COUNT(*) as total, COALESCE(SUM(NULLIF(regexp_replace(runtime, '[^0-9]', '', 'g'), '')::int), 0) as minutes FROM movies WHERE user_id=$1`, [userId]),
+      db.query(`SELECT ROUND(AVG(rating)::numeric,1) as avg_rating FROM movies WHERE user_id=$1 AND rating > 0`, [userId]),
+      db.query(`SELECT genres as genre, COUNT(*) as cnt FROM movies WHERE user_id=$1 AND genres IS NOT NULL AND genres != '' GROUP BY genres ORDER BY cnt DESC LIMIT 1`, [userId]),
       db.query(`SELECT created_at::date as day FROM movies WHERE user_id=$1 ORDER BY created_at DESC`, [userId])
     ]);
     // Calculate streak
