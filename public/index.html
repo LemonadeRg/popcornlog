@@ -112,6 +112,7 @@
       <div class="sidebar-spacer"></div>
       <div class="sidebar-divider"></div>
 
+      <button onclick="toggleNotifPanel()" id="notifBtn" class="sidebar-btn" title="Notifications">🔔<span class="sidebar-tooltip">Notifications</span><span id="notifBadge" class="sidebar-badge" style="display:none;"></span></button>
       <button onclick="showSection('profile')" id="profileBtn" class="sidebar-btn" title="Profile">👤<span class="sidebar-tooltip">Profile</span></button>
       <button id="adminBtn" onclick="showSection('admin')" class="sidebar-btn sidebar-btn-admin" title="Admin" style="display:none;">🛡️<span class="sidebar-tooltip">Admin</span></button>
       <button onclick="handleLogout()" class="sidebar-btn sidebar-btn-signout" title="Sign Out">🚪<span class="sidebar-tooltip">Sign Out</span></button>
@@ -607,13 +608,13 @@
     </div>
   </div>
 
-  <!-- Friend activity toast -->
-  <div id="activityToast" style="display:none; position:fixed; top:70px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; z-index:9999; box-shadow:0 8px 32px rgba(0,0,0,0.5); align-items:center; gap:12px; max-width:300px;">
-    <img id="activityToastPoster" src="" style="width:36px; height:52px; object-fit:cover; border-radius:4px; flex-shrink:0;">
-    <div>
-      <div id="activityToastText" style="color:var(--text); font-size:0.88em; line-height:1.4;"></div>
-      <div style="font-size:0.72em; color:var(--text-muted); margin-top:3px;">just now</div>
+  <!-- Notification Panel -->
+  <div id="notifPanel" style="display:none; position:fixed; left:74px; bottom:120px; width:320px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,0.5); z-index:5000; overflow:hidden;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); background:var(--surface2);">
+      <span style="font-weight:700; color:var(--text); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">🔔 Notifications</span>
+      <button onclick="clearAllNotifs()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75em; text-transform:uppercase; letter-spacing:0.5px; font-family:inherit;">Clear all</button>
     </div>
+    <div id="notifList" style="max-height:400px; overflow-y:auto;"></div>
   </div>
 
   <!-- Badge earned toast -->

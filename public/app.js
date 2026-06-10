@@ -67,12 +67,22 @@ function showApp() {
 // ===== NOTIFICATIONS =====
 let notifPollInterval = null;
 let lastSeenActivityId = 0;
-let shownActivityIds = new Set();
+let seenActivityIds = new Set();
+
+// Load persisted notifications from localStorage
+function loadStoredNotifs() {
+  try { return JSON.parse(localStorage.getItem('popcorn_notifs') || '[]'); } catch { return []; }
+}
+function saveStoredNotifs(notifs) {
+  localStorage.setItem('popcorn_notifs', JSON.stringify(notifs.slice(0, 50)));
+}
 
 function startNotificationPolling() {
   if (notifPollInterval) return;
-  pollNotifications(); // immediate first check
-  notifPollInterval = setInterval(pollNotifications, 30000); // every 30s
+  // Mark already-stored activity IDs as seen so we don't re-add them
+  loadStoredNotifs().forEach(n => { if (n.activityId) seenActivityIds.add(n.activityId); });
+  pollNotifications();
+  notifPollInterval = setInterval(pollNotifications, 30000);
 }
 
 async function pollNotifications() {
@@ -81,50 +91,194 @@ async function pollNotifications() {
     if (!res.ok) return;
     const data = await res.json();
 
-    // Update friend request badge
-    const badge = document.getElementById('friendRequestBadge');
-    if (badge) {
-      if (data.pendingRequests > 0) {
-        badge.textContent = data.pendingRequests;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
+    const stored = loadStoredNotifs();
+    let changed = false;
+
+    // Friend requests — sync them
+    // Remove old friend-request notifs and re-add current ones
+    const withoutRequests = stored.filter(n => n.type !== 'friend_request');
+    // We'll add one consolidated or individual ones from server
+    // For simplicity: if pending > 0 and no request notif, add a refresh notif
+    // Actually better: reload pending requests to get details
+    if (data.pendingRequests > 0) {
+      // Fetch full request list for names
+      const reqRes = await fetch('/api/friends/requests');
+      if (reqRes.ok) {
+        const requests = await reqRes.json();
+        const existingRequestIds = new Set(withoutRequests.filter(n=>n.type==='friend_request').map(n=>n.requestId));
+        requests.forEach(r => {
+          if (!stored.find(n => n.type === 'friend_request' && n.requestId === r.id)) {
+            withoutRequests.unshift({
+              id: `req_${r.id}`,
+              type: 'friend_request',
+              requestId: r.id,
+              username: r.username,
+              avatar: r.avatar || '🎬',
+              time: new Date().toISOString(),
+              read: false
+            });
+            changed = true;
+          }
+        });
+        // Remove request notifs that are no longer pending
+        const pendingIds = new Set(requests.map(r => r.id));
+        for (let i = withoutRequests.length - 1; i >= 0; i--) {
+          if (withoutRequests[i].type === 'friend_request' && !pendingIds.has(withoutRequests[i].requestId)) {
+            withoutRequests.splice(i, 1);
+            changed = true;
+          }
+        }
       }
+    } else {
+      // Remove all friend request notifs
+      const before = withoutRequests.length;
+      for (let i = withoutRequests.length - 1; i >= 0; i--) {
+        if (withoutRequests[i].type === 'friend_request') withoutRequests.splice(i, 1);
+      }
+      if (withoutRequests.length !== before) changed = true;
     }
 
-    // Show toast for new friend activity
-    if (data.newActivity && data.newActivity.length > 0) {
-      let delay = 0;
-      for (const activity of data.newActivity) {
-        if (shownActivityIds.has(activity.id)) continue;
-        shownActivityIds.add(activity.id);
-        if (activity.type === 'movie_added') {
-          setTimeout(() => showActivityToast(activity), delay);
-          delay += 4500;
-        }
+    // New movie activity
+    if (data.newActivity) {
+      data.newActivity.forEach(activity => {
+        if (seenActivityIds.has(activity.id)) return;
+        seenActivityIds.add(activity.id);
         if (activity.id > lastSeenActivityId) lastSeenActivityId = activity.id;
-      }
-      // Mark as seen
+        const d = activity.data;
+        withoutRequests.unshift({
+          id: `act_${activity.id}`,
+          type: 'movie_added',
+          activityId: activity.id,
+          username: d.username,
+          avatar: d.avatar || '🎬',
+          title: d.title,
+          poster: d.poster,
+          year: d.year,
+          time: activity.created_at,
+          read: false
+        });
+        changed = true;
+      });
       if (lastSeenActivityId > 0) {
         fetch('/api/notifications/seen', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ lastActivityId: lastSeenActivityId })
         }).catch(() => {});
       }
     }
+
+    if (changed) saveStoredNotifs(withoutRequests);
+    renderNotifBadge();
+    if (document.getElementById('notifPanel').style.display !== 'none') renderNotifPanel();
   } catch (e) { /* silently fail */ }
 }
 
-function showActivityToast(activity) {
-  const toast = document.getElementById('activityToast');
-  const d = activity.data;
-  document.getElementById('activityToastPoster').src = d.poster && d.poster !== 'N/A' ? d.poster : '';
-  document.getElementById('activityToastText').innerHTML =
-    `<strong>${d.avatar || '🎬'} ${d.username}</strong> added <strong>${d.title}</strong> to their movies`;
-  toast.style.display = 'flex';
-  clearTimeout(window._activityToastTimer);
-  window._activityToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 5000);
+function renderNotifBadge() {
+  const notifs = loadStoredNotifs();
+  const unread = notifs.filter(n => !n.read).length;
+  const badge = document.getElementById('notifBadge');
+  const friendBadge = document.getElementById('friendRequestBadge');
+  const friendReqs = notifs.filter(n => n.type === 'friend_request').length;
+
+  if (badge) {
+    if (unread > 0) { badge.textContent = unread > 9 ? '9+' : unread; badge.style.display = 'flex'; }
+    else badge.style.display = 'none';
+  }
+  if (friendBadge) {
+    if (friendReqs > 0) { friendBadge.textContent = friendReqs; friendBadge.style.display = 'flex'; }
+    else friendBadge.style.display = 'none';
+  }
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+  } else {
+    renderNotifPanel();
+    panel.style.display = 'block';
+    // Mark all as read
+    const notifs = loadStoredNotifs();
+    notifs.forEach(n => n.read = true);
+    saveStoredNotifs(notifs);
+    renderNotifBadge();
+  }
+}
+
+// Close panel when clicking outside
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notifPanel');
+  const btn = document.getElementById('notifBtn');
+  if (panel && !panel.contains(e.target) && btn && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+
+function renderNotifPanel() {
+  const notifs = loadStoredNotifs();
+  const list = document.getElementById('notifList');
+  if (!list) return;
+
+  if (notifs.length === 0) {
+    list.innerHTML = `<div style="padding:28px; text-align:center; color:var(--text-muted); font-size:0.88em;">No notifications yet</div>`;
+    return;
+  }
+
+  list.innerHTML = notifs.map(n => {
+    const time = n.time ? new Date(n.time).toLocaleString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+    if (n.type === 'friend_request') {
+      return `
+        <div style="padding:14px 16px; border-bottom:1px solid var(--border); background:${n.read ? 'transparent' : 'rgba(0,224,84,0.04)'};">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <span style="font-size:1.4em;">${n.avatar}</span>
+            <div style="flex:1;">
+              <div style="color:var(--text); font-size:0.88em;"><strong>${n.username}</strong> sent you a friend request</div>
+              <div style="color:var(--text-muted); font-size:0.75em; margin-top:2px;">${time}</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="notifRespondRequest(${n.requestId}, 'accept', '${n.id}')" style="flex:1; padding:6px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit;">Accept</button>
+            <button onclick="notifRespondRequest(${n.requestId}, 'decline', '${n.id}')" style="flex:1; padding:6px; background:transparent; color:var(--red); border:1px solid var(--red); border-radius:4px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit;">Decline</button>
+          </div>
+        </div>`;
+    }
+    if (n.type === 'movie_added') {
+      return `
+        <div style="padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; background:${n.read ? 'transparent' : 'rgba(0,224,84,0.04)'};">
+          <img src="${n.poster && n.poster !== 'N/A' ? n.poster : ''}" onerror="this.style.display='none'" style="width:36px; height:52px; object-fit:cover; border-radius:4px; flex-shrink:0;">
+          <div style="flex:1; min-width:0;">
+            <div style="color:var(--text); font-size:0.88em;"><strong>${n.avatar} ${n.username}</strong> added <strong>${n.title}</strong></div>
+            <div style="color:var(--text-muted); font-size:0.75em; margin-top:2px;">${n.year || ''} · ${time}</div>
+          </div>
+          <button onclick="dismissNotif('${n.id}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1em; flex-shrink:0;">✕</button>
+        </div>`;
+    }
+    return '';
+  }).join('');
+}
+
+async function notifRespondRequest(requestId, action, notifId) {
+  await fetch(`/api/friends/request/${requestId}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ action })
+  });
+  dismissNotif(notifId);
+  if (action === 'accept') loadFriends();
+  loadPendingRequests();
+}
+
+function dismissNotif(notifId) {
+  const notifs = loadStoredNotifs().filter(n => n.id !== notifId);
+  saveStoredNotifs(notifs);
+  renderNotifPanel();
+  renderNotifBadge();
+}
+
+function clearAllNotifs() {
+  saveStoredNotifs([]);
+  renderNotifPanel();
+  renderNotifBadge();
 }
 
 function togglePw(inputId, btn) {
