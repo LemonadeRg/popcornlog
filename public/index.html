@@ -12,25 +12,30 @@
   <!-- LOGIN/SIGNUP PAGE -->
   <div id="authPage" style="display: flex;">
     <div class="auth-wrapper">
-      <div class="auth-box">
 
-        <!-- Language Switcher + Theme -->
-        <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:24px;">
-          <select onchange="setLang(this.value)" id="langSelectAuth" style="padding:6px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
-            <option value="en">🌐 EN</option>
-            <option value="fr">🌐 FR</option>
-            <option value="ar">🌐 AR</option>
-          </select>
-          <button id="themeToggleAuth" onclick="toggleTheme()" style="padding:6px 10px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1em;" title="Toggle light/dark mode">🌙</button>
-        </div>
+      <!-- Movie poster background collage -->
+      <div class="auth-bg-overlay"></div>
+
+      <!-- Top-right controls -->
+      <div class="auth-controls">
+        <select onchange="setLang(this.value)" id="langSelectAuth" class="auth-ctrl-select">
+          <option value="en">🌐 EN</option>
+          <option value="fr">🌐 FR</option>
+          <option value="ar">🌐 AR</option>
+        </select>
+        <button id="themeToggleAuth" onclick="toggleTheme()" class="auth-ctrl-btn" title="Toggle theme">🌙</button>
+      </div>
+
+      <div class="auth-box">
 
         <!-- Login Form -->
         <div id="loginForm">
-          <div style="text-align:center; margin-bottom:10px;">
-            <img src="logo.svg" alt="PopcornLog" style="width:220px; height:220px; display:block; margin:0 auto;">
+          <div class="auth-logo-wrap">
+            <img src="logo.svg" alt="PopcornLog" class="auth-logo-img">
           </div>
-          <h1 style="color:var(--text); text-align:center; margin-bottom:6px; font-size:1.8em; letter-spacing:3px;">PopcornLog</h1>
-          <p class="auth-tagline" data-i18n="tagline">Track films you've watched.</p>
+          <h1 class="auth-brand-name">POPCORNLOG</h1>
+          <p class="auth-tagline-main">Discover. Watch. Remember.</p>
+          <p class="auth-tagline-sub">Your personal movie diary.</p>
 
           <input type="email" id="loginEmail" class="auth-input" data-i18n="emailPlaceholder" placeholder="Email">
           <div class="pw-wrapper" style="margin-bottom:20px;">
@@ -41,17 +46,18 @@
 
           <p class="auth-footer">
             <span data-i18n="noAccount">No account?</span>
-            <span onclick="toggleAuth()" style="color:var(--green); cursor:pointer; margin-left:4px;" data-i18n="signUp">Sign Up</span>
+            <span onclick="toggleAuth()" class="auth-link" data-i18n="signUp">Sign Up</span>
           </p>
         </div>
 
         <!-- Signup Form -->
         <div id="signupForm" style="display:none;">
-          <div style="text-align:center; margin-bottom:10px;">
-            <img src="logo.svg" alt="PopcornLog" style="width:220px; height:220px; display:block; margin:0 auto;">
+          <div class="auth-logo-wrap">
+            <img src="logo.svg" alt="PopcornLog" class="auth-logo-img">
           </div>
-          <h1 style="color:var(--text); text-align:center; margin-bottom:6px; font-size:1.8em; letter-spacing:3px;">PopcornLog</h1>
-          <p class="auth-tagline" data-i18n="tagline">Track films you've watched.</p>
+          <h1 class="auth-brand-name">POPCORNLOG</h1>
+          <p class="auth-tagline-main">Discover. Watch. Remember.</p>
+          <p class="auth-tagline-sub">Your personal movie diary.</p>
 
           <input type="text" id="signupUsername" class="auth-input" data-i18n="usernamePlaceholder" placeholder="Username">
           <input type="email" id="signupEmail" class="auth-input" data-i18n="emailPlaceholder" placeholder="Email" oninput="checkGmailHint()" style="margin-bottom:5px;">
@@ -64,7 +70,7 @@
 
           <p class="auth-footer">
             <span data-i18n="haveAccount">Have an account?</span>
-            <span onclick="toggleAuth()" style="color:var(--green); cursor:pointer; margin-left:4px;" data-i18n="signIn">Sign In</span>
+            <span onclick="toggleAuth()" class="auth-link" data-i18n="signIn">Sign In</span>
           </p>
         </div>
       </div>
@@ -82,7 +88,7 @@
       <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="showSection('home')">
         <img src="logo.svg" alt="PopcornLog" style="width:44px;height:44px;flex-shrink:0;transition:filter 0.2s;" onmouseover="this.style.filter='drop-shadow(0 0 8px rgba(232,184,75,0.5))'" onmouseout="this.style.filter='none'">
         <div class="sidebar-corner-text">
-          <span class="sidebar-corner-name">PopcornLog</span>
+          <span class="sidebar-corner-name">POPCORNLOG</span>
           <span class="sidebar-corner-tagline">Track · Review · Discover</span>
         </div>
       </div>
