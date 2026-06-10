@@ -80,7 +80,7 @@
       <button id="hamburgerBtn" onclick="toggleMobileMenu()" style="display:none; background:none; border:none; color:var(--text); font-size:1.4em; cursor:pointer; padding:4px 8px; flex-shrink:0;">☰</button>
 
       <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="showSection('home')">
-        <img src="logo.svg" alt="PopcornLog" style="width:40px;height:40px;flex-shrink:0;">
+        <img src="logo.svg" alt="PopcornLog" style="width:44px;height:44px;flex-shrink:0;transition:filter 0.2s;" onmouseover="this.style.filter='drop-shadow(0 0 8px rgba(232,184,75,0.5))'" onmouseout="this.style.filter='none'">
         <div class="sidebar-corner-text">
           <span class="sidebar-corner-name">PopcornLog</span>
           <span class="sidebar-corner-tagline">Track · Review · Discover</span>
@@ -673,7 +673,7 @@
   <div id="mobileDrawerOverlay" onclick="closeMobileMenu()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:8000;"></div>
   <div id="mobileDrawer" style="display:none; position:fixed; top:0; left:0; width:260px; height:100%; background:var(--surface); border-right:1px solid var(--border); z-index:8001; flex-direction:column; padding:20px 0; overflow-y:auto;">
     <div style="display:flex; align-items:center; gap:10px; padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:8px;">
-      <img src="logo.svg" style="width:32px; height:32px;">
+      <img src="logo.svg" style="width:36px; height:36px;">
       <div>
         <div style="font-weight:800; color:var(--text); font-size:0.95em;">PopcornLog</div>
         <div style="font-size:0.7em; color:var(--text-muted);">Track · Review · Discover</div>

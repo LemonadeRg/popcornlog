@@ -131,18 +131,25 @@ h1 {
 }
 
 .sidebar-corner-name {
-  font-size: 1em;
-  font-weight: 700;
+  font-size: 1.05em;
+  font-weight: 800;
   color: var(--text);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   line-height: 1;
+  font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #F5D06A 0%, #E8B84B 50%, #C9920A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .sidebar-corner-tagline {
-  font-size: 0.65em;
+  font-size: 0.62em;
   color: var(--text-muted);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   line-height: 1;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .sidebar-btn {
