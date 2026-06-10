@@ -305,15 +305,26 @@ const requireAuth = (req, res, next) => {
 app.get('/api/home/all', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
-    // Run all DB queries in parallel
-    const [moviesRes, ratingsRes, genreRes, streakRes, feedFriendsRes, leaderboardRes] = await Promise.all([
+    // Use allSettled so one bad query doesn't kill everything
+    const results = await Promise.allSettled([
       db.query(`SELECT COUNT(*) as total, COALESCE(SUM(NULLIF(regexp_replace(runtime, '[^0-9]', '', 'g'), '')::int), 0) as minutes FROM movies WHERE user_id=$1`, [userId]),
       db.query(`SELECT ROUND(AVG(rating)::numeric,1) as avg_rating FROM movies WHERE user_id=$1 AND rating > 0`, [userId]),
       db.query(`SELECT genres as genre, COUNT(*) as cnt FROM movies WHERE user_id=$1 AND genres IS NOT NULL AND genres != '' GROUP BY genres ORDER BY cnt DESC LIMIT 1`, [userId]),
       db.query(`SELECT created_at::date as day FROM movies WHERE user_id=$1 ORDER BY created_at DESC`, [userId]),
       db.query(`SELECT CASE WHEN from_user_id=$1 THEN to_user_id ELSE from_user_id END as friend_id FROM friend_requests WHERE (from_user_id=$1 OR to_user_id=$1) AND status='accepted'`, [userId]),
-      db.query(`SELECT u.id, u.username, u.avatar, u.active_badge, COUNT(m.id) AS movie_count FROM users u LEFT JOIN movies m ON m.user_id = u.id GROUP BY u.id, u.username, u.avatar, u.active_badge ORDER BY movie_count DESC LIMIT 3`)
+      db.query(`SELECT u.id, u.username, u.avatar, COUNT(m.id) AS movie_count FROM users u LEFT JOIN movies m ON m.user_id = u.id GROUP BY u.id, u.username, u.avatar ORDER BY movie_count DESC LIMIT 3`)
     ]);
+    const val = (i, fallback) => results[i].status === 'fulfilled' ? results[i].value : { rows: fallback || [] };
+    const moviesRes     = val(0, [{total:0, minutes:0}]);
+    const ratingsRes    = val(1);
+    const genreRes      = val(2);
+    const streakRes     = val(3);
+    const feedFriendsRes= val(4);
+    const leaderboardRes= val(5);
+
+    // Log any failures for debugging
+    results.forEach((r, i) => { if (r.status === 'rejected') console.error(`home/all query[${i}] failed:`, r.reason?.message); });
+
     // Streak
     let streak = 0;
     const days = streakRes.rows.map(r => r.day?.toISOString?.()?.slice(0,10));
@@ -328,13 +339,15 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
     const friendIds = feedFriendsRes.rows.map(r => r.friend_id);
     let feed = [];
     if (friendIds.length) {
-      const feedRes = await db.query(
-        `SELECT fa.*, u.username, u.avatar FROM friend_activity fa JOIN users u ON u.id = fa.from_user_id WHERE fa.from_user_id = ANY($1) ORDER BY fa.created_at DESC LIMIT 30`,
-        [friendIds]
-      );
-      feed = feedRes.rows;
+      try {
+        const feedRes = await db.query(
+          `SELECT fa.*, u.username, u.avatar FROM friend_activity fa JOIN users u ON u.id = fa.from_user_id WHERE fa.from_user_id = ANY($1) ORDER BY fa.created_at DESC LIMIT 30`,
+          [friendIds]
+        );
+        feed = feedRes.rows;
+      } catch(e) { console.error('feed query failed:', e.message); }
     }
-    // Trending from TMDB (non-blocking — if it fails, just return empty)
+    // Trending from TMDB
     let trending = [];
     try {
       const tr = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}&language=en-US`);
@@ -344,10 +357,11 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
         year: m.release_date?.slice(0,4), rating: m.vote_average?.toFixed(1), overview: m.overview
       }));
     } catch(_) {}
+
     res.json({
       stats: {
-        total: parseInt(moviesRes.rows[0].total) || 0,
-        hours: Math.round((moviesRes.rows[0].minutes || 0) / 60),
+        total: parseInt(moviesRes.rows[0]?.total) || 0,
+        hours: Math.round((moviesRes.rows[0]?.minutes || 0) / 60),
         avgRating: parseFloat(ratingsRes.rows[0]?.avg_rating) || 0,
         topGenre: genreRes.rows[0]?.genre || null,
         streak
@@ -356,7 +370,10 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
       feed,
       trending
     });
-  } catch(err) { res.status(500).json({ error: err.message }); }
+  } catch(err) {
+    console.error('/api/home/all error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Home page: personal stats

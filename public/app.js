@@ -709,28 +709,35 @@ async function loadHome() {
   // Ping first — ensures Railway server is awake before we fire the real request
   await waitForServer(25000);
 
-  // Retry the single combined endpoint up to 8 times
-  for (let attempt = 1; attempt <= 8; attempt++) {
+  let lastErr = '';
+  // Retry the single combined endpoint up to 6 times with 2s gaps
+  for (let attempt = 1; attempt <= 6; attempt++) {
     try {
       const res = await fetch('/api/home/all');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      // Even a 500 with partial data is better than nothing
+      if (data.stats || data.leaderboard || data.trending) {
+        renderHomeData(data);
+        return; // success
+      }
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       renderHomeData(data);
-      return; // success
+      return;
     } catch (err) {
+      lastErr = err.message;
       console.warn(`loadHome attempt ${attempt} failed:`, err.message);
-      if (attempt < 8) await new Promise(r => setTimeout(r, 2000));
+      if (attempt < 6) await new Promise(r => setTimeout(r, 2000));
     }
   }
-  // All attempts failed — show retry button
+  // All attempts failed — show visible retry button with error
   const errHTML = `<div style="color:var(--text-muted);font-size:0.85em;text-align:center;padding:20px 0;">
-    Couldn't load data.<br>
+    Failed to load. <span style="font-size:0.8em;opacity:0.6">${lastErr}</span><br>
     <button onclick="loadHome()" style="margin-top:10px;padding:7px 18px;background:var(--green);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;">Retry</button>
   </div>`;
   if (statsEl) statsEl.innerHTML = errHTML;
-  if (podium)  podium.innerHTML  = '';
-  if (trendEl) trendEl.innerHTML = '';
+  if (podium)  podium.innerHTML  = errHTML;
+  if (trendEl) trendEl.innerHTML = errHTML;
+  if (feedEl)  feedEl.innerHTML  = errHTML;
 }
 
 async function addMovieFromFeed(title) {
