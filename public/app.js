@@ -567,34 +567,55 @@ function showSectionEl(id) {
 // ===== HOME PAGE =====
 async function loadHome() {
   document.getElementById('moodResult').style.display = 'none';
-  loadHomeStats();
-  loadLeaderboard();
-  loadHomeFeed();
-  loadHomeTrending();
-  // Retry any sections that failed due to Railway cold start
-  scheduleHomeRetry(1);
+  const statsEl = document.getElementById('homeStats');
+  const podium  = document.getElementById('leaderboardPodium');
+  const feedEl  = document.getElementById('homeFeed');
+  const trendEl = document.getElementById('homeTrending');
+  if (statsEl) statsEl.innerHTML = '<div class="home-loading">Loading stats…</div>';
+  if (podium)  podium.innerHTML  = '<div class="home-loading">Loading leaderboard…</div>';
+  if (feedEl)  feedEl.innerHTML  = '<div class="home-loading">Loading feed…</div>';
+  if (trendEl) trendEl.innerHTML = '<div class="home-loading">Loading trending…</div>';
+
+  await Promise.allSettled([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
+  homeRetryLoop(1);
 }
 
-function scheduleHomeRetry(attempt) {
-  if (attempt > 4) return;
-  const delay = attempt * 2000; // 2s, 4s, 6s, 8s
+function homeHasContent() {
+  return !!(
+    document.getElementById('leaderboardPodium')?.querySelector('.leaderboard-card') ||
+    document.getElementById('homeTrending')?.querySelector('.trending-card') ||
+    document.getElementById('homeStats')?.querySelector('.home-stat-card')
+  );
+}
+
+function homeRetryLoop(attempt) {
+  if (attempt > 10) return;
   setTimeout(async () => {
-    const podium   = document.getElementById('leaderboardPodium');
-    const trending = document.getElementById('homeTrending');
-    const stats    = document.getElementById('homeStats');
-    const needsRetry =
-      !podium?.children.length ||
-      !trending?.children.length ||
-      !stats?.children.length;
-    if (needsRetry) {
-      if (!podium?.children.length)   loadLeaderboard();
-      if (!trending?.children.length) loadHomeTrending();
-      if (!stats?.children.length)    loadHomeStats();
-      if (document.getElementById('homeFeed')?.innerHTML?.includes('Loading'))
-        loadHomeFeed();
-      scheduleHomeRetry(attempt + 1);
+    const podium  = document.getElementById('leaderboardPodium');
+    const trendEl = document.getElementById('homeTrending');
+    const statsEl = document.getElementById('homeStats');
+    const feedEl  = document.getElementById('homeFeed');
+    const promises = [];
+    if (!podium?.querySelector('.leaderboard-card'))    promises.push(loadLeaderboard());
+    if (!trendEl?.querySelector('.trending-card'))      promises.push(loadHomeTrending());
+    if (!statsEl?.querySelector('.home-stat-card'))     promises.push(loadHomeStats());
+    if (!feedEl?.querySelector('.feed-card') &&
+        !feedEl?.textContent?.includes('friends'))      promises.push(loadHomeFeed());
+    if (promises.length) {
+      await Promise.allSettled(promises);
+      // After ~6s with nothing loaded, auto-reload once (mimics user refresh fix)
+      if (attempt === 3 && !homeHasContent()) {
+        if (!sessionStorage.getItem('homeReloaded')) {
+          sessionStorage.setItem('homeReloaded', '1');
+          location.reload();
+          return;
+        }
+      }
+      homeRetryLoop(attempt + 1);
+    } else {
+      sessionStorage.removeItem('homeReloaded');
     }
-  }, delay);
+  }, 2000);
 }
 
 async function loadHomeStats() {
@@ -859,12 +880,18 @@ async function addMovie() {
 
 // ===== LOAD & DISPLAY MOVIES =====
 async function loadMovies() {
-  try {
-    const response = await fetch('/api/movies');
-    allMovies = await response.json();
-    displayMovies(allMovies);
-  } catch (error) {
-    console.error('Error loading movies:', error);
+  // Retry up to 5 times — ensures server is warm before home page loads
+  for (let i = 0; i < 5; i++) {
+    try {
+      const response = await fetch('/api/movies');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      allMovies = await response.json();
+      displayMovies(allMovies);
+      return; // success
+    } catch (error) {
+      console.warn(`loadMovies attempt ${i+1} failed:`, error.message);
+      if (i < 4) await new Promise(r => setTimeout(r, 1500));
+    }
   }
 }
 
