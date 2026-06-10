@@ -829,6 +829,7 @@ async function showSection(section) {
   document.getElementById('topratedSection').style.display = 'none';
   document.getElementById('recommendedSection').style.display = 'none';
   document.getElementById('quizSection').style.display = 'none';
+  document.getElementById('gamesSection').style.display = 'none';
   document.getElementById('profileSection').style.display = 'none';
   document.getElementById('friendsSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'none';
@@ -1909,12 +1910,13 @@ function renderPosterGame() {
     `<div class="poster-hint-revealed">${h.label}: <strong>${h.value}</strong></div>`).join('');
   const nextHint = hints[posterHintsUsed];
 
+  const blur = posterAnswered ? 0 : posterBlurLevel;
   document.getElementById('posterArena').innerHTML = `
     <div style="position:relative;display:inline-block;margin-bottom:20px;">
       <img src="${posterData.poster}" id="posterImg"
-        style="width:220px;height:330px;object-fit:cover;border-radius:12px;filter:blur(${posterBlurLevel}px);transition:filter 0.5s;"
+        style="width:220px;height:330px;object-fit:cover;border-radius:12px;filter:blur(${blur}px);transition:filter 0.5s;"
         onerror="this.style.display='none'">
-      <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.8);color:#E8B84B;font-weight:800;padding:5px 12px;border-radius:20px;font-size:0.85em;">${pts} pts</div>
+      <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.8);color:#E8B84B;font-weight:800;padding:5px 12px;border-radius:20px;font-size:0.85em;">${posterAnswered ? '✅' : pts + ' pts'}</div>
     </div>
     <div style="margin-bottom:16px;">${revealedHints}</div>
     ${!posterAnswered ? `
@@ -1954,22 +1956,12 @@ function submitPosterGuess() {
   const pts = [100, 75, 50, 25][posterHintsUsed] || 25;
   const fb = document.getElementById('posterFeedback');
   if (correct) {
-    posterAnswered = true;
-    // Unblur the poster
-    const img = document.getElementById('posterImg');
-    if (img) img.style.filter = 'blur(0px)';
-    fb.innerHTML = `✅ Correct! <span style="color:#E8B84B">+${pts} XP</span>`;
-    fb.style.color = 'var(--green)';
     awardGameXP(pts, 'poster');
+    // Unblur then re-render with answered state (shows single Next button)
     setTimeout(() => {
-      const arena = document.getElementById('posterArena');
-      if (arena) {
-        const btn = document.createElement('div');
-        btn.style.marginTop = '12px';
-        btn.innerHTML = `<button onclick="loadPosterGame()" style="padding:11px 28px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">Next Poster 🎬</button>`;
-        arena.appendChild(btn);
-      }
-    }, 800);
+      posterAnswered = true;
+      renderPosterGame();
+    }, 600);
   } else {
     fb.textContent = `❌ Not quite — try again!`;
     fb.style.color = 'var(--red)';
