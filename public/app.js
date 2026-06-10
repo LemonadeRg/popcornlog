@@ -635,6 +635,26 @@ async function loadMovies() {
   } catch (error) {
     console.error('Error loading movies:', error);
   }
+  loadLeaderboard();
+}
+
+async function loadLeaderboard() {
+  try {
+    const res = await fetch('/api/leaderboard');
+    if (!res.ok) return;
+    const top = await res.json();
+    const medals = ['🥇','🥈','🥉'];
+    const podium = document.getElementById('leaderboardPodium');
+    if (!podium) return;
+    podium.innerHTML = top.map((u, i) => `
+      <div style="display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:5px 12px 5px 7px;">
+        <span style="font-size:1.1em;">${medals[i]}</span>
+        <span style="font-size:1.2em;">${u.avatar || '🎬'}</span>
+        <span style="font-size:0.82em; font-weight:700; color:var(--text);">${u.username}</span>
+        <span style="font-size:0.75em; color:var(--text-muted);">${u.movie_count} film${u.movie_count == 1 ? '' : 's'}</span>
+      </div>
+    `).join('');
+  } catch(e) {}
 }
 
 function displayMovies(movies, containerId = 'moviesContainer') {

@@ -290,6 +290,22 @@ const requireAuth = (req, res, next) => {
 // ===== MOVIES ROUTES =====
 
 // Get all movies for user
+app.get('/api/leaderboard', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT u.id, u.username, u.avatar, u.active_badge, COUNT(m.id) AS movie_count
+      FROM users u
+      LEFT JOIN movies m ON m.user_id = u.id
+      GROUP BY u.id, u.username, u.avatar, u.active_badge
+      ORDER BY movie_count DESC
+      LIMIT 3
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/movies', requireAuth, async (req, res) => {
   try {
     const result = await db.query(
