@@ -273,15 +273,6 @@
           </div>
 
           <!-- Banner picker modal (hidden) -->
-          <div id="bannerPickerModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; width:340px;">
-              <div style="font-weight:800; color:var(--text); margin-bottom:18px; font-size:1.05em;">🎨 Pick a banner color</div>
-              <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:20px;" id="bannerColorGrid"></div>
-              <div style="display:flex; gap:10px;">
-                <button onclick="closeBannerPicker()" style="flex:1; padding:9px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600;">Cancel</button>
-              </div>
-            </div>
-          </div>
 
           <!-- Change Password -->
           <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
@@ -744,5 +735,15 @@
 
   <script src="i18n.js"></script>
   <script src="app.js"></script>
+  <!-- Banner picker — must be at body level so position:fixed works correctly -->
+  <div id="bannerPickerModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; width:340px;">
+      <div style="font-weight:800; color:var(--text); margin-bottom:18px; font-size:1.05em;">🎨 Pick a banner color</div>
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:20px;" id="bannerColorGrid"></div>
+      <div style="display:flex; gap:10px;">
+        <button onclick="closeBannerPicker()" style="flex:1; padding:9px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600;">Cancel</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
