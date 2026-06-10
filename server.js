@@ -290,6 +290,73 @@ const requireAuth = (req, res, next) => {
 // ===== MOVIES ROUTES =====
 
 // Get all movies for user
+// Home page: personal stats
+app.get('/api/home/stats', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const [moviesRes, ratingsRes, genreRes, streakRes] = await Promise.all([
+      db.query(`SELECT COUNT(*) as total, COALESCE(SUM(runtime), 0) as minutes FROM movies WHERE user_id=$1`, [userId]),
+      db.query(`SELECT ROUND(AVG(rating),1) as avg_rating FROM movies WHERE user_id=$1 AND rating > 0`, [userId]),
+      db.query(`SELECT genre, COUNT(*) as cnt FROM movies WHERE user_id=$1 AND genre IS NOT NULL AND genre != '' GROUP BY genre ORDER BY cnt DESC LIMIT 1`, [userId]),
+      db.query(`SELECT created_at::date as day FROM movies WHERE user_id=$1 ORDER BY created_at DESC`, [userId])
+    ]);
+    // Calculate streak
+    let streak = 0;
+    const days = streakRes.rows.map(r => r.day?.toISOString?.()?.slice(0,10));
+    const uniqueDays = [...new Set(days)].sort().reverse();
+    const today = new Date().toISOString().slice(0,10);
+    let check = today;
+    for (const d of uniqueDays) {
+      if (d === check) { streak++; const dt = new Date(check); dt.setDate(dt.getDate()-1); check = dt.toISOString().slice(0,10); }
+      else if (d < check) break;
+    }
+    res.json({
+      total: parseInt(moviesRes.rows[0].total) || 0,
+      hours: Math.round((moviesRes.rows[0].minutes || 0) / 60),
+      avgRating: parseFloat(ratingsRes.rows[0]?.avg_rating) || 0,
+      topGenre: genreRes.rows[0]?.genre || null,
+      streak
+    });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// Home page: friend activity feed
+app.get('/api/home/feed', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const friendsRes = await db.query(
+      `SELECT CASE WHEN from_user_id=$1 THEN to_user_id ELSE from_user_id END as friend_id
+       FROM friend_requests WHERE (from_user_id=$1 OR to_user_id=$1) AND status='accepted'`, [userId]
+    );
+    const friendIds = friendsRes.rows.map(r => r.friend_id);
+    if (!friendIds.length) return res.json([]);
+    const feed = await db.query(
+      `SELECT fa.*, u.username, u.avatar FROM friend_activity fa
+       JOIN users u ON u.id = fa.from_user_id
+       WHERE fa.from_user_id = ANY($1)
+       ORDER BY fa.created_at DESC LIMIT 30`,
+      [friendIds]
+    );
+    res.json(feed.rows);
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// Home page: trending from TMDB
+app.get('/api/home/trending', requireAuth, async (req, res) => {
+  try {
+    const r = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}&language=en-US`);
+    const data = await r.json();
+    const movies = (data.results || []).slice(0, 10).map(m => ({
+      title: m.title,
+      poster: m.poster_path ? `${TMDB_IMG}${m.poster_path}` : null,
+      year: m.release_date?.slice(0,4),
+      rating: m.vote_average?.toFixed(1),
+      overview: m.overview
+    }));
+    res.json(movies);
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/leaderboard', requireAuth, async (req, res) => {
   try {
     const result = await db.query(`

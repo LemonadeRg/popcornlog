@@ -98,7 +98,8 @@
 
     <!-- SIDEBAR -->
     <nav class="sidebar">
-      <button onclick="showSection('movies')" id="moviesBtn" class="sidebar-btn active" title="My Movies">🎬<span class="sidebar-tooltip">My Movies</span></button>
+      <button onclick="showSection('home')" id="homeBtn" class="sidebar-btn active" title="Home">🏠<span class="sidebar-tooltip">Home</span></button>
+      <button onclick="showSection('movies')" id="moviesBtn" class="sidebar-btn" title="My Movies">🎬<span class="sidebar-tooltip">My Movies</span></button>
       <button onclick="showSection('watchlist')" id="watchlistBtn" class="sidebar-btn" title="Watch Later">📋<span class="sidebar-tooltip">Watch Later</span></button>
       <button onclick="showSection('toprated')" id="topratedBtn" class="sidebar-btn" title="Top Rated">⭐<span class="sidebar-tooltip">Top Rated</span></button>
       <button onclick="showSection('recommended')" id="recommendedBtn" class="sidebar-btn" title="Recommended">🎯<span class="sidebar-tooltip">Recommended</span></button>
@@ -124,7 +125,47 @@
       <div class="app-content">
         <div class="container">
 
-      <div id="moviesSection">
+      <!-- HOME SECTION -->
+      <div id="homeSection">
+
+        <!-- Stats row -->
+        <div id="homeStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;"></div>
+
+        <!-- Two column layout: feed + right panel -->
+        <div style="display:grid; grid-template-columns:1fr 320px; gap:24px; align-items:start;">
+
+          <!-- Activity Feed -->
+          <div>
+            <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📰 Friend Activity</div>
+            <div id="homeFeed"></div>
+          </div>
+
+          <!-- Right column: Mood picker + Trending -->
+          <div style="display:flex; flex-direction:column; gap:24px;">
+
+            <!-- Mood picker -->
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px;">
+              <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🎬 What to watch tonight?</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+                <button onclick="pickMood('chill')" class="mood-btn">😌 Chill</button>
+                <button onclick="pickMood('intense')" class="mood-btn">😤 Intense</button>
+                <button onclick="pickMood('laugh')" class="mood-btn">😂 Make me laugh</button>
+                <button onclick="pickMood('surprise')" class="mood-btn">🎲 Surprise me</button>
+              </div>
+              <div id="moodResult" style="display:none;"></div>
+            </div>
+
+            <!-- Trending -->
+            <div>
+              <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🔥 Trending This Week</div>
+              <div id="homeTrending"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div id="moviesSection" style="display:none;">
 
         <!-- LEADERBOARD -->
         <div style="margin-bottom:24px;">

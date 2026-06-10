@@ -1324,3 +1324,58 @@ h1 {
     gap: 10px !important;
   }
 }
+
+/* ===== HOME PAGE ===== */
+.mood-btn {
+  padding: 10px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.83em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.mood-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(0,224,84,0.07);
+}
+.home-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-feed-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.home-trending-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.home-trending-item:last-child { border-bottom: none; }
+
+@media (max-width: 768px) {
+  #homeSection > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+  #homeStats {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}

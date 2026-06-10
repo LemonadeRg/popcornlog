@@ -48,6 +48,7 @@ window.addEventListener('load', async function() {
     if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
     loadMovies();
+    showSection('home');
   } else {
     showAuth();
   }
@@ -515,7 +516,143 @@ function showSectionEl(id) {
   el.classList.add('section-visible');
 }
 
+// ===== HOME PAGE =====
+async function loadHome() {
+  loadHomeStats();
+  loadHomeFeed();
+  loadHomeTrending();
+  document.getElementById('moodResult').style.display = 'none';
+}
+
+async function loadHomeStats() {
+  try {
+    const res = await fetch('/api/home/stats');
+    const s = await res.json();
+    const el = document.getElementById('homeStats');
+    el.innerHTML = `
+      <div class="home-stat-card">
+        <div style="font-size:1.8em;">🎬</div>
+        <div style="font-size:1.6em; font-weight:800; color:var(--text);">${s.total}</div>
+        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Films Logged</div>
+      </div>
+      <div class="home-stat-card">
+        <div style="font-size:1.8em;">⏱️</div>
+        <div style="font-size:1.6em; font-weight:800; color:var(--text);">${s.hours}</div>
+        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Hours Watched</div>
+      </div>
+      <div class="home-stat-card">
+        <div style="font-size:1.8em;">⭐</div>
+        <div style="font-size:1.6em; font-weight:800; color:var(--text);">${s.avgRating || '—'}</div>
+        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Avg Rating</div>
+      </div>
+      <div class="home-stat-card">
+        <div style="font-size:1.8em;">${s.streak > 2 ? '🔥' : '📅'}</div>
+        <div style="font-size:1.6em; font-weight:800; color:${s.streak > 2 ? 'var(--green)' : 'var(--text)'};">${s.streak}</div>
+        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Day Streak</div>
+      </div>
+    `;
+  } catch(e) {}
+}
+
+async function loadHomeFeed() {
+  const el = document.getElementById('homeFeed');
+  el.innerHTML = `<div style="color:var(--text-muted); font-size:0.85em; padding:8px 0;">Loading…</div>`;
+  try {
+    const res = await fetch('/api/home/feed');
+    const feed = await res.json();
+    if (!feed.length) {
+      el.innerHTML = `<div style="color:var(--text-muted); font-size:0.85em; padding:20px 0; text-align:center;">Add some friends to see their activity here 👥</div>`;
+      return;
+    }
+    el.innerHTML = feed.map(item => {
+      const d = item.data || {};
+      const time = new Date(item.created_at).toLocaleString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+      if (item.type === 'movie_added') {
+        return `<div class="home-feed-item">
+          <img src="${d.poster && d.poster !== 'N/A' ? d.poster : ''}" onerror="this.style.display='none'" style="width:40px; height:58px; object-fit:cover; border-radius:5px; flex-shrink:0;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.88em; color:var(--text);"><strong>${item.avatar || '🎬'} ${item.username}</strong> added <strong>${d.title}</strong></div>
+            ${d.rating ? `<div style="color:var(--green); font-size:0.78em; margin-top:2px;">${'⭐'.repeat(d.rating)}</div>` : ''}
+            <div style="color:var(--text-muted); font-size:0.75em; margin-top:3px;">${time}</div>
+          </div>
+          <button onclick="addMovieFromFeed('${(d.title||'').replace(/'/g,"\\'")}')
+" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;">+ Add to watchlist</button>
+        </div>`;
+      }
+      return '';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--text-muted); font-size:0.85em;">Could not load feed.</div>`;
+  }
+}
+
+async function addMovieFromFeed(title) {
+  try {
+    await fetch('/api/watchlist', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ movieName: title })
+    });
+    showBadgeToast({ emoji: '📋', name: `"${title}" added to Watch Later!` });
+  } catch(e) {}
+}
+
+async function loadHomeTrending() {
+  const el = document.getElementById('homeTrending');
+  try {
+    const res = await fetch('/api/home/trending');
+    const movies = await res.json();
+    el.innerHTML = `<div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px 16px;">` +
+      movies.map(m => `
+        <div class="home-trending-item">
+          <img src="${m.poster || ''}" onerror="this.style.display='none'" style="width:32px; height:46px; object-fit:cover; border-radius:4px; flex-shrink:0;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.85em; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.title}</div>
+            <div style="font-size:0.75em; color:var(--text-muted);">${m.year || ''} · ⭐ ${m.rating}</div>
+          </div>
+          <button onclick="addMovieFromFeed('${(m.title||'').replace(/'/g,"\\'")}')
+" style="padding:4px 9px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.72em; cursor:pointer; font-family:inherit; flex-shrink:0;">+ Later</button>
+        </div>
+      `).join('') + `</div>`;
+  } catch(e) {}
+}
+
+const moodMap = {
+  chill:    ['Drama', 'Romance'],
+  intense:  ['Thriller', 'Action'],
+  laugh:    ['Comedy'],
+  surprise: ['Action', 'Comedy', 'Drama', 'Thriller', 'Sci-Fi', 'Horror', 'Romance']
+};
+
+async function pickMood(mood) {
+  const el = document.getElementById('moodResult');
+  el.style.display = 'block';
+  el.innerHTML = `<div style="color:var(--text-muted); font-size:0.83em; text-align:center; padding:8px;">Finding something…</div>`;
+  try {
+    const genres = moodMap[mood];
+    const genre = genres[Math.floor(Math.random() * genres.length)];
+    const res = await fetch(`/api/recommendations/${genre}`);
+    const movies = await res.json();
+    if (!movies.length) { el.innerHTML = `<div style="color:var(--text-muted); font-size:0.83em;">Nothing found. Try again!</div>`; return; }
+    const pick = movies[Math.floor(Math.random() * movies.length)];
+    el.innerHTML = `
+      <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--surface2); border-radius:8px; border:1px solid var(--border);">
+        <img src="${pick.poster || ''}" onerror="this.style.display='none'" style="width:52px; height:76px; object-fit:cover; border-radius:5px; flex-shrink:0;">
+        <div style="flex:1;">
+          <div style="font-weight:700; color:var(--text); font-size:0.9em;">${pick.title}</div>
+          <div style="color:var(--text-muted); font-size:0.75em; margin:3px 0;">${pick.year || ''} · ${genre}</div>
+          <div style="color:var(--text-dim); font-size:0.75em; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${pick.plot || ''}</div>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button onclick="addMovieFromFeed('${(pick.title||'').replace(/'/g,"\\'")}')
+" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit;">+ Watch Later</button>
+            <button onclick="pickMood('${mood}')" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit;">🔀 Try again</button>
+          </div>
+        </div>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div style="color:var(--text-muted); font-size:0.83em;">Something went wrong.</div>`; }
+}
+
 const sectionNames = {
+  home: '🏠 Home',
   movies: '🎬 My Movies',
   watchlist: '📋 Watch Later',
   toprated: '⭐ Top Rated',
@@ -528,6 +665,7 @@ const sectionNames = {
 };
 
 function showSection(section) {
+  document.getElementById('homeSection').style.display = 'none';
   document.getElementById('moviesSection').style.display = 'none';
   document.getElementById('watchlistSection').style.display = 'none';
   document.getElementById('topratedSection').style.display = 'none';
@@ -546,7 +684,11 @@ function showSection(section) {
   const titleEl = document.getElementById('topbarSectionName');
   if (titleEl) titleEl.textContent = sectionNames[section] || '';
 
-  if (section === 'movies') {
+  if (section === 'home') {
+    showSectionEl('homeSection');
+    document.getElementById('homeBtn').classList.add('active');
+    loadHome();
+  } else if (section === 'movies') {
     showSectionEl('moviesSection');
     document.getElementById('moviesBtn').classList.add('active');
   } else if (section === 'watchlist') {
