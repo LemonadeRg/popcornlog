@@ -61,6 +61,70 @@ function showAuth() {
 function showApp() {
   document.getElementById('authPage').style.display = 'none';
   document.getElementById('appPage').style.display = 'flex';
+  startNotificationPolling();
+}
+
+// ===== NOTIFICATIONS =====
+let notifPollInterval = null;
+let lastSeenActivityId = 0;
+let shownActivityIds = new Set();
+
+function startNotificationPolling() {
+  if (notifPollInterval) return;
+  pollNotifications(); // immediate first check
+  notifPollInterval = setInterval(pollNotifications, 30000); // every 30s
+}
+
+async function pollNotifications() {
+  try {
+    const res = await fetch('/api/notifications');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // Update friend request badge
+    const badge = document.getElementById('friendRequestBadge');
+    if (badge) {
+      if (data.pendingRequests > 0) {
+        badge.textContent = data.pendingRequests;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Show toast for new friend activity
+    if (data.newActivity && data.newActivity.length > 0) {
+      let delay = 0;
+      for (const activity of data.newActivity) {
+        if (shownActivityIds.has(activity.id)) continue;
+        shownActivityIds.add(activity.id);
+        if (activity.type === 'movie_added') {
+          setTimeout(() => showActivityToast(activity), delay);
+          delay += 4500;
+        }
+        if (activity.id > lastSeenActivityId) lastSeenActivityId = activity.id;
+      }
+      // Mark as seen
+      if (lastSeenActivityId > 0) {
+        fetch('/api/notifications/seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lastActivityId: lastSeenActivityId })
+        }).catch(() => {});
+      }
+    }
+  } catch (e) { /* silently fail */ }
+}
+
+function showActivityToast(activity) {
+  const toast = document.getElementById('activityToast');
+  const d = activity.data;
+  document.getElementById('activityToastPoster').src = d.poster && d.poster !== 'N/A' ? d.poster : '';
+  document.getElementById('activityToastText').innerHTML =
+    `<strong>${d.avatar || '🎬'} ${d.username}</strong> added <strong>${d.title}</strong> to their movies`;
+  toast.style.display = 'flex';
+  clearTimeout(window._activityToastTimer);
+  window._activityToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 5000);
 }
 
 function togglePw(inputId, btn) {
@@ -1283,6 +1347,14 @@ async function loadPendingRequests() {
   try {
     const res = await fetch('/api/friends/requests');
     const requests = await res.json();
+
+    // Update sidebar badge
+    const badge = document.getElementById('friendRequestBadge');
+    if (badge) {
+      if (requests.length > 0) { badge.textContent = requests.length; badge.style.display = 'flex'; }
+      else badge.style.display = 'none';
+    }
+
     const card = document.getElementById('pendingRequestsCard');
     const list = document.getElementById('pendingRequestsList');
 

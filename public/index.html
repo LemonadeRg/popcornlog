@@ -106,7 +106,7 @@
 
       <div class="sidebar-divider"></div>
 
-      <button onclick="showSection('friends')" id="friendsBtn" class="sidebar-btn" title="Friends">👥<span class="sidebar-tooltip">Friends</span></button>
+      <button onclick="showSection('friends')" id="friendsBtn" class="sidebar-btn" title="Friends">👥<span class="sidebar-tooltip">Friends</span><span id="friendRequestBadge" class="sidebar-badge" style="display:none;"></span></button>
       <button onclick="showSection('chat')" id="chatBtn" class="sidebar-btn" title="Chat">💬<span class="sidebar-tooltip">Chat</span></button>
 
       <div class="sidebar-spacer"></div>
@@ -604,6 +604,15 @@
             style="flex:1; padding:11px; background:#e84040; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-family:inherit;">Confirm</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Friend activity toast -->
+  <div id="activityToast" style="display:none; position:fixed; top:70px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; z-index:9999; box-shadow:0 8px 32px rgba(0,0,0,0.5); align-items:center; gap:12px; max-width:300px;">
+    <img id="activityToastPoster" src="" style="width:36px; height:52px; object-fit:cover; border-radius:4px; flex-shrink:0;">
+    <div>
+      <div id="activityToastText" style="color:var(--text); font-size:0.88em; line-height:1.4;"></div>
+      <div style="font-size:0.72em; color:var(--text-muted); margin-top:3px;">just now</div>
     </div>
   </div>
 

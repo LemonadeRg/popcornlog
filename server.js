@@ -134,6 +134,27 @@ async function initDB() {
   // Add active_badge column if not exists
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_badge TEXT DEFAULT NULL`);
 
+  // Friend activity feed (for movie notifications)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS friend_activity (
+      id SERIAL PRIMARY KEY,
+      from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      data JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Track which notifications each user has seen
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS notification_seen (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      last_seen_activity_id INTEGER DEFAULT 0,
+      last_seen_request_count INTEGER DEFAULT 0,
+      PRIMARY KEY (user_id)
+    )
+  `);
+
   console.log('✅ Database tables ready');
 }
 
@@ -297,6 +318,15 @@ app.post('/api/movies', requireAuth, async (req, res) => {
     // Check rating badge
     const newBadges = await checkMovieBadges(req.session.userId);
     if (parseInt(rating) === 5) { const b = await awardBadge(req.session.userId, 'the_critic'); if (b) newBadges.push(b); }
+
+    // Record activity for friends
+    const userRes = await db.query('SELECT username, avatar FROM users WHERE id=$1', [req.session.userId]);
+    const actor = userRes.rows[0];
+    await db.query(
+      `INSERT INTO friend_activity (from_user_id, type, data) VALUES ($1, 'movie_added', $2)`,
+      [req.session.userId, JSON.stringify({ title: movie.title, poster: movie.poster, year: movie.year, username: actor.username, avatar: actor.avatar || '🎬' })]
+    );
+
     res.json({ success: true, newBadges });
   } catch (err) {
     if (err.code === '23505') {
@@ -458,6 +488,66 @@ app.post('/api/badges/quiz-correct', requireAuth, async (req, res) => {
       if (b) newBadges.push(b);
     }
     res.json({ newBadges, total: req.session.quizCorrect });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== NOTIFICATIONS =====
+
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    // Get pending friend requests count
+    const reqResult = await db.query(
+      `SELECT COUNT(*) as cnt FROM friend_requests WHERE to_user_id=$1 AND status='pending'`,
+      [userId]
+    );
+    const pendingRequests = parseInt(reqResult.rows[0].cnt);
+
+    // Get user's friends
+    const friendsRes = await db.query(
+      `SELECT CASE WHEN from_user_id=$1 THEN to_user_id ELSE from_user_id END as friend_id
+       FROM friend_requests WHERE (from_user_id=$1 OR to_user_id=$1) AND status='accepted'`,
+      [userId]
+    );
+    const friendIds = friendsRes.rows.map(r => r.friend_id);
+
+    // Get last seen state
+    const seenRes = await db.query(
+      `SELECT last_seen_activity_id FROM notification_seen WHERE user_id=$1`,
+      [userId]
+    );
+    const lastSeenId = seenRes.rows[0]?.last_seen_activity_id || 0;
+
+    // Get new activity from friends since last seen
+    let newActivity = [];
+    if (friendIds.length > 0) {
+      const actRes = await db.query(
+        `SELECT * FROM friend_activity WHERE from_user_id = ANY($1) AND id > $2 ORDER BY created_at DESC LIMIT 20`,
+        [friendIds, lastSeenId]
+      );
+      newActivity = actRes.rows.map(r => ({ ...r, data: r.data }));
+    }
+
+    res.json({ pendingRequests, newActivity });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Mark activity as seen
+app.post('/api/notifications/seen', requireAuth, async (req, res) => {
+  try {
+    const { lastActivityId } = req.body;
+    await db.query(
+      `INSERT INTO notification_seen (user_id, last_seen_activity_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET last_seen_activity_id = GREATEST(notification_seen.last_seen_activity_id, $2)`,
+      [req.session.userId, lastActivityId || 0]
+    );
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
