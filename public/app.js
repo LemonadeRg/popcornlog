@@ -48,7 +48,7 @@ window.addEventListener('load', async function() {
     if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
     loadMovies();
-    await showSection('home');
+    showSection('home');
   } else {
     showAuth();
   }
@@ -519,7 +519,11 @@ function showSectionEl(id) {
 // ===== HOME PAGE =====
 async function loadHome() {
   document.getElementById('moodResult').style.display = 'none';
-  await Promise.all([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
+  // Run all independently so one failure doesn't blank the whole page
+  loadHomeStats();
+  loadLeaderboard();
+  loadHomeFeed();
+  loadHomeTrending();
 }
 
 async function loadHomeStats() {
@@ -563,18 +567,21 @@ async function loadHomeFeed() {
       return;
     }
     el.innerHTML = feed.map(item => {
-      const d = item.data || {};
+      const raw = item.data;
+      const d = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
       const time = new Date(item.created_at).toLocaleString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
       if (item.type === 'movie_added') {
+        const safeTitle = (d.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const poster = d.poster && d.poster !== 'N/A' ? d.poster : '';
+        const stars = d.rating ? '⭐'.repeat(Math.min(d.rating, 5)) : '';
         return `<div class="home-feed-item">
-          <img src="${d.poster && d.poster !== 'N/A' ? d.poster : ''}" onerror="this.style.display='none'" style="width:40px; height:58px; object-fit:cover; border-radius:5px; flex-shrink:0;">
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:0.88em; color:var(--text);"><strong>${item.avatar || '🎬'} ${item.username}</strong> added <strong>${d.title}</strong></div>
-            ${d.rating ? `<div style="color:var(--green); font-size:0.78em; margin-top:2px;">${'⭐'.repeat(d.rating)}</div>` : ''}
+          <img src="${poster}" onerror="this.style.display='none'" style="width:40px; height:58px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--surface2);">
+          <div style="flex:1; min-width:0; overflow:hidden;">
+            <div style="font-size:0.88em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>${item.avatar || '🎬'} ${item.username || ''}</strong> added <strong>${d.title || ''}</strong></div>
+            ${stars ? `<div style="color:var(--green); font-size:0.78em; margin-top:2px;">${stars}</div>` : ''}
             <div style="color:var(--text-muted); font-size:0.75em; margin-top:3px;">${time}</div>
           </div>
-          <button onclick="addMovieFromFeed('${(d.title||'').replace(/'/g,"\\'")}')
-" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;">+ Add to watchlist</button>
+          <button onclick="addMovieFromFeed('${safeTitle}')" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;">+ Later</button>
         </div>`;
       }
       return '';
@@ -607,8 +614,7 @@ async function loadHomeTrending() {
             <div style="font-size:0.85em; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.title}</div>
             <div style="font-size:0.75em; color:var(--text-muted);">${m.year || ''} · ⭐ ${m.rating}</div>
           </div>
-          <button onclick="addMovieFromFeed('${(m.title||'').replace(/'/g,"\\'")}')
-" style="padding:4px 9px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.72em; cursor:pointer; font-family:inherit; flex-shrink:0;">+ Later</button>
+          <button onclick="addMovieFromFeed('${(m.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')" style="padding:4px 9px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.72em; cursor:pointer; font-family:inherit; flex-shrink:0;">+ Later</button>
         </div>
       `).join('') + `</div>`;
   } catch(e) {}
@@ -641,8 +647,7 @@ async function pickMood(mood) {
           <div style="color:var(--text-muted); font-size:0.75em; margin:3px 0;">${pick.year || ''} · ${genre}</div>
           <div style="color:var(--text-dim); font-size:0.75em; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${pick.overview || pick.plot || ''}</div>
           <div style="display:flex; gap:6px; margin-top:8px;">
-            <button onclick="addMovieFromFeed('${(pick.title||'').replace(/'/g,"\\'")}')
-" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit;">+ Watch Later</button>
+            <button onclick="addMovieFromFeed('${(pick.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit;">+ Watch Later</button>
             <button onclick="pickMood('${mood}')" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit;">🔀 Try again</button>
           </div>
         </div>
@@ -686,7 +691,7 @@ async function showSection(section) {
   if (section === 'home') {
     showSectionEl('homeSection');
     document.getElementById('homeBtn').classList.add('active');
-    await loadHome();
+    loadHome();
   } else if (section === 'movies') {
     showSectionEl('moviesSection');
     document.getElementById('moviesBtn').classList.add('active');
