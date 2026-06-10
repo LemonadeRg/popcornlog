@@ -905,11 +905,14 @@ async function addMovie() {
 
   openRatingModal(async (rating, notes) => {
     try {
+      const tmdbIdToSend = selectedTmdbId;
+      selectedTmdbId = null;
       const response = await fetch('/api/movies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           movieName: movieInput,
+          tmdbId: tmdbIdToSend,
           rating: rating,
           notes: notes || '',
         }),
@@ -1311,7 +1314,7 @@ async function searchMovies(inputId, suggestionsId) {
 
       if (data.results && data.results.length > 0) {
         suggestionsBox.innerHTML = data.results.map(movie => `
-          <div class="suggestion-item" onclick="selectSuggestion('${inputId}', '${suggestionsId}', '${movie.title.replace(/'/g, "\\'")}')">
+          <div class="suggestion-item" onclick="selectSuggestion('${inputId}', '${suggestionsId}', '${movie.title.replace(/'/g, "\\'")}', ${movie.id || 'null'})">
             <img src="${movie.poster || ''}" alt="" class="suggestion-poster" onerror="this.style.display='none'">
             <div class="suggestion-info">
               <div class="suggestion-title">${movie.title}</div>
@@ -1330,12 +1333,15 @@ async function searchMovies(inputId, suggestionsId) {
   }, 300);
 }
 
-function selectSuggestion(inputId, suggestionsId, title) {
+let selectedTmdbId = null;
+
+function selectSuggestion(inputId, suggestionsId, title, tmdbId) {
   document.getElementById(inputId).value = title;
   document.getElementById(suggestionsId).classList.remove('active');
   document.getElementById(suggestionsId).innerHTML = '';
   // If this is the main movie add input, immediately open the rating popup
   if (inputId === 'movieInput') {
+    selectedTmdbId = tmdbId || null;
     addMovie();
   }
 }

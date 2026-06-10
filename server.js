@@ -517,9 +517,9 @@ app.get('/api/movies', requireAuth, async (req, res) => {
 
 // Add movie
 app.post('/api/movies', requireAuth, async (req, res) => {
-  const { movieName, rating, notes } = req.body;
+  const { movieName, tmdbId, rating, notes } = req.body;
   try {
-    const movie = await tmdbFetchByTitle(movieName);
+    const movie = tmdbId ? await tmdbFetchById(tmdbId) : await tmdbFetchByTitle(movieName);
     if (!movie) return res.status(404).json({ error: 'Movie not found' });
 
     // Check for duplicate (case-insensitive) before inserting
@@ -828,6 +828,7 @@ app.get('/api/search/:query', requireAuth, async (req, res) => {
     if (!response.data.results || response.data.results.length === 0) return res.json({ results: [] });
 
     const results = response.data.results.slice(0, 6).map(m => ({
+      id:     m.id,
       title:  m.title,
       year:   m.release_date ? m.release_date.substring(0, 4) : 'N/A',
       poster: m.poster_path ? TMDB_IMG + m.poster_path : null
