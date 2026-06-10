@@ -177,11 +177,12 @@ const BADGES = {
 // Award badge if not already earned, returns badge if newly earned
 async function awardBadge(userId, badgeId) {
   try {
-    await db.query(
-      `INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    const result = await db.query(
+      `INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING badge_id`,
       [userId, badgeId]
     );
-    return BADGES[badgeId] || null;
+    // Only return the badge if a row was actually inserted (newly earned)
+    return result.rows.length > 0 ? (BADGES[badgeId] || null) : null;
   } catch (e) { return null; }
 }
 
