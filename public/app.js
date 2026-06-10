@@ -1538,7 +1538,7 @@ function applyBanner(color, posterUrl) {
     // Movie poster as banner with dark gradient overlay so text stays readable
     banner.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 100%), url('${posterUrl}')`;
     banner.style.backgroundSize = 'cover';
-    banner.style.backgroundPosition = 'center top';
+    banner.style.backgroundPosition = 'center 30%';
     banner.style.backgroundColor = '';
   } else {
     banner.style.backgroundImage = `linear-gradient(135deg, ${color} 0%, ${color}cc 60%, #E8B84B22 100%)`;
