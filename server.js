@@ -922,6 +922,22 @@ app.put('/api/profile', requireAuth, async (req, res) => {
 });
 
 // Change password
+// Change username
+app.put('/api/profile/username', requireAuth, async (req, res) => {
+  const { username } = req.body;
+  if (!username || username.trim().length < 2) return res.status(400).json({ error: 'Username must be at least 2 characters' });
+  if (username.trim().length > 30) return res.status(400).json({ error: 'Username must be 30 characters or less' });
+  if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) return res.status(400).json({ error: 'Only letters, numbers and underscores allowed' });
+  try {
+    await db.query('UPDATE users SET username=$1 WHERE id=$2', [username.trim(), req.session.userId]);
+    req.session.username = username.trim();
+    res.json({ success: true, username: username.trim() });
+  } catch(err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Username already taken' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/profile/password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 

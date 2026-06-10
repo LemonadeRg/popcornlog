@@ -249,6 +249,18 @@
             </div>
           </div>
 
+          <!-- Change Username -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">✏️ Change Username</div>
+            <div style="display:flex; gap:10px;">
+              <input type="text" id="newUsernameInput" placeholder="New username" maxlength="30"
+                style="flex:1; padding:10px 14px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.92em;"
+                onkeydown="if(event.key==='Enter')changeUsername()">
+              <button onclick="changeUsername()" style="padding:10px 20px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit;">Save</button>
+            </div>
+            <div id="usernameMsg" style="margin-top:8px; font-size:0.82em; min-height:18px;"></div>
+          </div>
+
           <!-- Favorite Movie pin -->
           <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
             <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📌 Favorite Movie</div>

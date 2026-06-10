@@ -1494,6 +1494,8 @@ async function loadProfile() {
     document.getElementById('profileUsername').textContent = data.username;
     document.getElementById('profileEmail').textContent = data.email;
     document.getElementById('profileBio').value = data.bio;
+    const unInput = document.getElementById('newUsernameInput');
+    if (unInput) unInput.value = data.username;
     document.getElementById('statMovies').textContent = data.totalMovies;
     document.getElementById('statAvg').textContent = data.avgRating;
     document.getElementById('statWatchlist').textContent = data.watchlistCount;
@@ -1632,6 +1634,28 @@ async function saveProfile() {
     showAlert('✅ Profile saved!');
   } else {
     showAlert('❌ ' + data.error);
+  }
+}
+
+async function changeUsername() {
+  const input = document.getElementById('newUsernameInput');
+  const msg = document.getElementById('usernameMsg');
+  const username = input.value.trim();
+  if (!username) { msg.style.color = 'var(--red)'; msg.textContent = 'Please enter a username.'; return; }
+  msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving…';
+  const res = await fetch('/api/profile/username', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    msg.style.color = 'var(--green)'; msg.textContent = '✅ Username updated!';
+    document.getElementById('profileUsername').textContent = data.username;
+    input.value = data.username;
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+  } else {
+    msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + data.error;
   }
 }
 
