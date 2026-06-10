@@ -1334,6 +1334,10 @@ function selectSuggestion(inputId, suggestionsId, title) {
   document.getElementById(inputId).value = title;
   document.getElementById(suggestionsId).classList.remove('active');
   document.getElementById(suggestionsId).innerHTML = '';
+  // If this is the main movie add input, immediately open the rating popup
+  if (inputId === 'movieInput') {
+    addMovie();
+  }
 }
 
 document.addEventListener('click', function(event) {
