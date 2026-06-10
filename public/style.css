@@ -1199,52 +1199,43 @@ h1 {
 }
 
 /* ===== MOBILE ===== */
+/* Drawer nav button */
+.drawer-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.92em;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.drawer-btn:hover {
+  background: var(--surface2);
+}
+.drawer-btn.active {
+  color: var(--green);
+  font-weight: 700;
+}
+
 @media (max-width: 600px) {
   body {
     font-size: 14px;
   }
 
-  /* On mobile: sidebar becomes a bottom navigation bar */
+  /* Hide sidebar entirely on mobile — replaced by hamburger drawer */
   .sidebar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: auto;
-    transform: none;
-    width: 100%;
-    height: 58px;
-    border-radius: 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    flex-direction: row;
-    justify-content: space-around;
+    display: none !important;
+  }
+
+  #hamburgerBtn {
+    display: flex !important;
     align-items: center;
-    padding: 0 8px;
-    gap: 0;
-    box-shadow: none;
-  }
-
-  .sidebar-corner-logo,
-  .sidebar-corner-text,
-  .sidebar-divider,
-  .sidebar-spacer {
-    display: none;
-  }
-
-  .sidebar-btn {
-    flex: 1;
-    height: 100%;
-    border-radius: 0;
-    border: none !important;
-    font-size: 1.4em;
-    max-width: 60px;
-  }
-
-  .sidebar-btn.active {
-    color: var(--green);
-    background: transparent;
-    border-bottom: 2px solid var(--green) !important;
   }
 
   /* Hide tooltips on mobile (touch devices) */
@@ -1254,7 +1245,7 @@ h1 {
 
   .app-main {
     margin-left: 0 !important;
-    padding-bottom: 58px;
+    padding-bottom: 0;
   }
 
   .app-topbar {

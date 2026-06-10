@@ -45,9 +45,13 @@ window.addEventListener('load', async function() {
   if (data.authenticated) {
     currentUserId = data.userId;
     currentIsAdmin = data.isAdmin || false;
-    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
+    if (currentIsAdmin) {
+      document.getElementById('adminBtn').style.display = 'flex';
+      const da = document.getElementById('drawerAdminBtn');
+      if (da) da.style.display = 'flex';
+    }
     showApp();
-    await loadMovies();   // wait for server to warm up first
+    await loadMovies();
     showSection('home');
   } else {
     showAuth();
@@ -63,6 +67,29 @@ function showApp() {
   document.getElementById('authPage').style.display = 'none';
   document.getElementById('appPage').style.display = 'flex';
   startNotificationPolling();
+}
+
+// ===== MOBILE DRAWER =====
+function toggleMobileMenu() {
+  const drawer = document.getElementById('mobileDrawer');
+  const overlay = document.getElementById('mobileDrawerOverlay');
+  const open = drawer.style.display === 'flex';
+  drawer.style.display = open ? 'none' : 'flex';
+  overlay.style.display = open ? 'none' : 'block';
+}
+function closeMobileMenu() {
+  document.getElementById('mobileDrawer').style.display = 'none';
+  document.getElementById('mobileDrawerOverlay').style.display = 'none';
+}
+function mobileNav(section) {
+  closeMobileMenu();
+  showSection(section);
+  // Sync active state in drawer
+  document.querySelectorAll('.drawer-btn').forEach(b => b.classList.remove('active'));
+  const map = { home:'Home', movies:'My Movies', watchlist:'Watch Later', toprated:'Top Rated', recommended:'Recommended', quiz:'Quiz', friends:'Friends', chat:'Chat', profile:'Profile', admin:'Admin' };
+  document.querySelectorAll('.drawer-btn').forEach(b => {
+    if (b.textContent.trim().includes(map[section] || '')) b.classList.add('active');
+  });
 }
 
 // ===== NOTIFICATIONS =====

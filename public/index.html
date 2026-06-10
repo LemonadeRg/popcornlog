@@ -76,7 +76,10 @@
 
     <!-- TOP HEADER (full width, fixed) -->
     <div class="sidebar-corner-logo">
-      <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="showSection('movies')">
+      <!-- Hamburger (mobile only) -->
+      <button id="hamburgerBtn" onclick="toggleMobileMenu()" style="display:none; background:none; border:none; color:var(--text); font-size:1.4em; cursor:pointer; padding:4px 8px; flex-shrink:0;">☰</button>
+
+      <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="showSection('home')">
         <img src="logo.svg" alt="PopcornLog" style="width:40px;height:40px;flex-shrink:0;">
         <div class="sidebar-corner-text">
           <span class="sidebar-corner-name">PopcornLog</span>
@@ -666,6 +669,33 @@
   </div>
 
   <!-- Badge earned toast -->
+  <!-- Mobile nav drawer -->
+  <div id="mobileDrawerOverlay" onclick="closeMobileMenu()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:8000;"></div>
+  <div id="mobileDrawer" style="display:none; position:fixed; top:0; left:0; width:260px; height:100%; background:var(--surface); border-right:1px solid var(--border); z-index:8001; flex-direction:column; padding:20px 0; overflow-y:auto;">
+    <div style="display:flex; align-items:center; gap:10px; padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:8px;">
+      <img src="logo.svg" style="width:32px; height:32px;">
+      <div>
+        <div style="font-weight:800; color:var(--text); font-size:0.95em;">PopcornLog</div>
+        <div style="font-size:0.7em; color:var(--text-muted);">Track · Review · Discover</div>
+      </div>
+    </div>
+    <button onclick="mobileNav('home')" class="drawer-btn">🏠 Home</button>
+    <button onclick="mobileNav('movies')" class="drawer-btn">🎬 My Movies</button>
+    <button onclick="mobileNav('watchlist')" class="drawer-btn">📋 Watch Later</button>
+    <button onclick="mobileNav('toprated')" class="drawer-btn">⭐ Top Rated</button>
+    <button onclick="mobileNav('recommended')" class="drawer-btn">🎯 Recommended</button>
+    <button onclick="mobileNav('quiz')" class="drawer-btn">🎲 Quiz</button>
+    <div style="height:1px; background:var(--border); margin:8px 16px;"></div>
+    <button onclick="mobileNav('friends')" class="drawer-btn">👥 Friends</button>
+    <button onclick="mobileNav('chat')" class="drawer-btn">💬 Chat</button>
+    <div style="height:1px; background:var(--border); margin:8px 16px;"></div>
+    <button onclick="mobileNav('profile')" class="drawer-btn">👤 Profile</button>
+    <button id="drawerAdminBtn" onclick="mobileNav('admin')" class="drawer-btn" style="display:none;">🛡️ Admin</button>
+    <div style="flex:1;"></div>
+    <div style="height:1px; background:var(--border); margin:8px 16px;"></div>
+    <button onclick="handleLogout(); closeMobileMenu();" class="drawer-btn" style="color:var(--red);">🚪 Sign Out</button>
+  </div>
+
   <div id="badgeToast" style="display:none; position:fixed; bottom:30px; right:30px; background:var(--surface); border:1px solid var(--green); border-radius:12px; padding:16px 20px; z-index:9999; box-shadow:0 8px 32px rgba(0,0,0,0.5); display:none; align-items:center; gap:14px; max-width:300px;">
     <div id="badgeToastEmoji" style="font-size:2.2em;"></div>
     <div>
