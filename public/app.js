@@ -646,12 +646,17 @@ async function loadLeaderboard() {
     const medals = ['🥇','🥈','🥉'];
     const podium = document.getElementById('leaderboardPodium');
     if (!podium) return;
+    const rankStyles = [
+      'border-color:rgba(255,215,0,0.4); background:rgba(255,215,0,0.05);',
+      'border-color:rgba(192,192,192,0.3); background:rgba(192,192,192,0.04);',
+      'border-color:rgba(205,127,50,0.3); background:rgba(205,127,50,0.04);'
+    ];
     podium.innerHTML = top.map((u, i) => `
-      <div style="display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:5px 12px 5px 7px;">
-        <span style="font-size:1.1em;">${medals[i]}</span>
-        <span style="font-size:1.2em;">${u.avatar || '🎬'}</span>
-        <span style="font-size:0.82em; font-weight:700; color:var(--text);">${u.username}</span>
-        <span style="font-size:0.75em; color:var(--text-muted);">${u.movie_count} film${u.movie_count == 1 ? '' : 's'}</span>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 12px; border-radius:12px; border:1px solid var(--border); ${rankStyles[i]} text-align:center;">
+        <span style="font-size:2em; line-height:1;">${medals[i]}</span>
+        <span style="font-size:2em; line-height:1;">${u.avatar || '🎬'}</span>
+        <span style="font-size:0.88em; font-weight:700; color:var(--text);">${u.username}</span>
+        <span style="font-size:0.78em; color:var(--text-muted); background:var(--surface2); padding:2px 10px; border-radius:10px;">${u.movie_count} film${u.movie_count == 1 ? '' : 's'}</span>
       </div>
     `).join('');
   } catch(e) {}
