@@ -2891,15 +2891,16 @@ async function deleteAdminMessage(msgId, btn) {
 
 // ===== FRIEND PROFILE =====
 async function viewFriendProfile(friendId, username) {
-  document.getElementById('friendProfileTitle').textContent = `${username}'s Profile`;
   document.getElementById('friendProfileModal').classList.add('active');
 
   // Reset
   document.getElementById('fpAvatar').textContent = '⏳';
   document.getElementById('fpUsername').textContent = username;
   document.getElementById('fpJoinDate').textContent = '';
+  document.getElementById('fpBio').style.display = 'none';
   document.getElementById('fpBio').textContent = '';
-  document.getElementById('fpBioBox').style.display = 'none';
+  document.getElementById('fpFavMovieBox').style.display = 'none';
+  document.getElementById('fpBadgesBox').style.display = 'none';
   document.getElementById('fpMovies').textContent = '...';
   document.getElementById('fpAvgRating').textContent = '...';
   document.getElementById('fpWatchlist').textContent = '...';
