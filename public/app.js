@@ -70,6 +70,21 @@ window.addEventListener('load', async function() {
     await waitForServer(20000); // wait up to 20s for Railway to wake up
     await loadMovies();
     showSection('home');
+    // Special welcome popup for bro
+    if (sessionStorage.getItem('broWelcome')) {
+      sessionStorage.removeItem('broWelcome');
+      setTimeout(() => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;`;
+        overlay.innerHTML = `<div style="background:#1c2228;border:1px solid #E8B84B;border-radius:20px;padding:40px 48px;text-align:center;max-width:340px;animation:authCardIn 0.4s ease;">
+          <div style="font-size:3em;margin-bottom:12px;">👋🍿</div>
+          <div style="font-size:1.5em;font-weight:800;color:#E8B84B;margin-bottom:8px;">Mra7ba b kho moul chi</div>
+          <div style="color:#7a8a99;font-size:0.9em;margin-bottom:24px;">Welcome to PopcornLog!</div>
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:10px 28px;background:#E8B84B;color:#000;border:none;border-radius:8px;font-weight:800;font-size:1em;cursor:pointer;font-family:inherit;">Let's go 🎬</button>
+        </div>`;
+        document.body.appendChild(overlay);
+      }, 800);
+    }
     // Backfill any badges earned before the badge system existed
     fetch('/api/badges/recalculate', { method: 'POST' })
       .then(r => r.json())
@@ -495,6 +510,10 @@ async function handleLogin() {
       return;
     }
 
+    // Special welcome for bro
+    if (email.toLowerCase() === 'ragraguinawfal6@gmail.com') {
+      sessionStorage.setItem('broWelcome', '1');
+    }
     // Reload the page so the server is fully warm before loading home data
     sessionStorage.setItem('justLoggedIn', '1');
     location.reload();
