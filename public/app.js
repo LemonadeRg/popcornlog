@@ -567,7 +567,7 @@ function showSectionEl(id) {
 
 // ===== HOME PAGE =====
 // Wait for server to be alive (handles Railway cold start)
-async function waitForServer(maxWaitMs = 20000) {
+async function waitForServer(maxWaitMs = 25000) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     try {
@@ -579,78 +579,26 @@ async function waitForServer(maxWaitMs = 20000) {
   return false;
 }
 
-async function loadHome() {
-  document.getElementById('moodResult').style.display = 'none';
+function renderHomeData(d) {
+  const s = d.stats || {};
   const statsEl = document.getElementById('homeStats');
   const podium  = document.getElementById('leaderboardPodium');
   const feedEl  = document.getElementById('homeFeed');
   const trendEl = document.getElementById('homeTrending');
-  if (statsEl) statsEl.innerHTML = '<div class="home-loading">Loading stats…</div>';
-  if (podium)  podium.innerHTML  = '<div class="home-loading">Loading leaderboard…</div>';
-  if (feedEl)  feedEl.innerHTML  = '<div class="home-loading">Loading feed…</div>';
-  if (trendEl) trendEl.innerHTML = '<div class="home-loading">Loading trending…</div>';
 
-  // Make sure server is awake before firing all requests
-  await waitForServer();
-
-  await Promise.allSettled([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
-  homeRetryLoop(1);
-}
-
-function homeHasContent() {
-  return !!(
-    document.getElementById('leaderboardPodium')?.querySelector('.leaderboard-card') ||
-    document.getElementById('homeTrending')?.querySelector('.trending-card') ||
-    document.getElementById('homeStats')?.querySelector('.home-stat-card')
-  );
-}
-
-function homeRetryLoop(attempt) {
-  if (attempt > 10) return;
-  setTimeout(async () => {
-    const podium  = document.getElementById('leaderboardPodium');
-    const trendEl = document.getElementById('homeTrending');
-    const statsEl = document.getElementById('homeStats');
-    const feedEl  = document.getElementById('homeFeed');
-    const promises = [];
-    if (!podium?.querySelector('.leaderboard-card'))    promises.push(loadLeaderboard());
-    if (!trendEl?.querySelector('.trending-card'))      promises.push(loadHomeTrending());
-    if (!statsEl?.querySelector('.home-stat-card'))     promises.push(loadHomeStats());
-    if (!feedEl?.querySelector('.feed-card') &&
-        !feedEl?.textContent?.includes('friends'))      promises.push(loadHomeFeed());
-    if (promises.length) {
-      await Promise.allSettled(promises);
-      // After ~6s with nothing loaded, auto-reload once (mimics user refresh fix)
-      if (attempt === 3 && !homeHasContent()) {
-        if (!sessionStorage.getItem('homeReloaded')) {
-          sessionStorage.setItem('homeReloaded', '1');
-          location.reload();
-          return;
-        }
-      }
-      homeRetryLoop(attempt + 1);
-    } else {
-      sessionStorage.removeItem('homeReloaded');
-    }
-  }, 2000);
-}
-
-async function loadHomeStats() {
-  try {
-    const res = await fetch('/api/home/stats');
-    const s = await res.json();
-    const el = document.getElementById('homeStats');
-    const days = Math.round(s.hours / 24 * 10) / 10;
-    el.innerHTML = `
+  // Stats
+  if (statsEl) {
+    const days = Math.round((s.hours || 0) / 24 * 10) / 10;
+    statsEl.innerHTML = `
       <div class="home-stat-card stat-green">
         <div class="stat-icon">🎬</div>
-        <div class="stat-value">${s.total}</div>
+        <div class="stat-value">${s.total || 0}</div>
         <div class="stat-label">Films Logged</div>
         <div class="stat-sub">${s.topGenre ? `Top genre: ${s.topGenre}` : 'Keep watching!'}</div>
       </div>
       <div class="home-stat-card stat-blue">
         <div class="stat-icon">⏱️</div>
-        <div class="stat-value">${s.hours}<span style="font-size:0.5em;font-weight:500;margin-left:3px;">hrs</span></div>
+        <div class="stat-value">${s.hours || 0}<span style="font-size:0.5em;font-weight:500;margin-left:3px;">hrs</span></div>
         <div class="stat-label">Time Watched</div>
         <div class="stat-sub">${days} days of cinema</div>
       </div>
@@ -661,55 +609,128 @@ async function loadHomeStats() {
         <div class="stat-sub">${s.avgRating >= 4 ? 'You love movies!' : s.avgRating ? 'Picky critic 🎭' : 'Rate some films'}</div>
       </div>
       <div class="home-stat-card stat-orange">
-        <div class="stat-icon">${s.streak > 2 ? '🔥' : '📅'}</div>
-        <div class="stat-value">${s.streak}</div>
+        <div class="stat-icon">${(s.streak || 0) > 2 ? '🔥' : '📅'}</div>
+        <div class="stat-value">${s.streak || 0}</div>
         <div class="stat-label">Day Streak</div>
-        <div class="stat-sub">${s.streak > 0 ? `${s.streak} day${s.streak > 1 ? 's' : ''} in a row` : 'Start your streak!'}</div>
-      </div>
-    `;
-  } catch(e) {}
+        <div class="stat-sub">${(s.streak || 0) > 0 ? `${s.streak} day${s.streak > 1 ? 's' : ''} in a row` : 'Start your streak!'}</div>
+      </div>`;
+  }
+
+  // Leaderboard
+  if (podium) {
+    const lb = d.leaderboard || [];
+    if (!lb.length) {
+      podium.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;padding:16px 0;text-align:center;">No data yet</div>`;
+    } else {
+      const rankColors = ['#FFD700','#C0C0C0','#CD7F32'];
+      podium.innerHTML = lb.map((u, i) => {
+        const pct = lb[0].movie_count > 0 ? Math.round((u.movie_count / lb[0].movie_count) * 100) : 0;
+        return `<div class="leaderboard-card">
+          <div class="lb-rank" style="color:${rankColors[i] || 'var(--text-muted)'}">${['🥇','🥈','🥉'][i] || i+1}</div>
+          <div class="lb-avatar">${u.avatar || '🎬'}</div>
+          <div class="lb-info">
+            <div class="lb-name">${u.username}</div>
+            <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${pct}%;background:${rankColors[i]}"></div></div>
+          </div>
+          <div class="lb-count">${u.movie_count} <span style="font-size:0.7em;opacity:0.6">films</span></div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Feed
+  if (feedEl) {
+    const feed = d.feed || [];
+    if (!feed.length) {
+      feedEl.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;padding:20px 0;text-align:center;">Add some friends to see their activity here 👥</div>`;
+    } else {
+      feedEl.innerHTML = feed.map(item => {
+        const raw = item.data;
+        const fd = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+        const time = new Date(item.created_at).toLocaleString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        if (item.type === 'movie_added') {
+          const safeTitle = (fd.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          const poster = fd.poster && fd.poster !== 'N/A' ? fd.poster : '';
+          const stars = fd.rating ? '⭐'.repeat(Math.min(fd.rating,5)) : '';
+          return `<div class="feed-card">
+            <div class="feed-poster-wrap"><img src="${poster}" onerror="this.style.display='none'" class="feed-poster"></div>
+            <div class="feed-body">
+              <div class="feed-meta">
+                <span class="feed-avatar">${item.avatar||'🎬'}</span>
+                <span class="feed-username">${item.username||''}</span>
+                <span class="feed-action">added a movie</span>
+              </div>
+              <div class="feed-title">${fd.title||'a movie'}</div>
+              ${stars ? `<div class="feed-stars">${stars}</div>` : ''}
+              <div class="feed-time">${time}</div>
+            </div>
+            <button onclick="addMovieFromFeed('${safeTitle}')" class="feed-add-btn">+ Later</button>
+          </div>`;
+        }
+        return '';
+      }).join('');
+    }
+  }
+
+  // Trending
+  if (trendEl) {
+    const movies = d.trending || [];
+    if (!movies.length) {
+      trendEl.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;padding:16px 0;text-align:center;">Trending unavailable</div>`;
+    } else {
+      trendEl.innerHTML = `<div class="trending-list">` +
+        movies.map((m, i) => `
+          <div class="trending-card">
+            <div class="trending-rank">${i+1}</div>
+            <img src="${m.poster||''}" onerror="this.style.display='none'" class="trending-poster">
+            <div class="trending-info">
+              <div class="trending-title">${m.title}</div>
+              <div class="trending-meta">${m.year||''}</div>
+            </div>
+            <div class="trending-rating">⭐ ${m.rating}</div>
+            <button onclick="addMovieFromFeed('${(m.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}') " class="trending-add-btn">+ Later</button>
+          </div>`).join('') + `</div>`;
+    }
+  }
 }
 
-async function loadHomeFeed() {
-  const el = document.getElementById('homeFeed');
-  el.innerHTML = `<div style="color:var(--text-muted); font-size:0.85em; padding:8px 0;">Loading…</div>`;
-  try {
-    const res = await fetch('/api/home/feed');
-    const feed = await res.json();
-    if (!feed.length) {
-      el.innerHTML = `<div style="color:var(--text-muted); font-size:0.85em; padding:20px 0; text-align:center;">Add some friends to see their activity here 👥</div>`;
-      return;
+async function loadHome() {
+  document.getElementById('moodResult').style.display = 'none';
+  const statsEl = document.getElementById('homeStats');
+  const podium  = document.getElementById('leaderboardPodium');
+  const feedEl  = document.getElementById('homeFeed');
+  const trendEl = document.getElementById('homeTrending');
+  const loadingHTML = `<div class="home-loading">Loading…</div>`;
+  if (statsEl) statsEl.innerHTML = loadingHTML;
+  if (podium)  podium.innerHTML  = loadingHTML;
+  if (feedEl)  feedEl.innerHTML  = loadingHTML;
+  if (trendEl) trendEl.innerHTML = loadingHTML;
+
+  // Ping first — ensures Railway server is awake before we fire the real request
+  await waitForServer(25000);
+
+  // Retry the single combined endpoint up to 8 times
+  for (let attempt = 1; attempt <= 8; attempt++) {
+    try {
+      const res = await fetch('/api/home/all');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderHomeData(data);
+      return; // success
+    } catch (err) {
+      console.warn(`loadHome attempt ${attempt} failed:`, err.message);
+      if (attempt < 8) await new Promise(r => setTimeout(r, 2000));
     }
-    el.innerHTML = feed.map(item => {
-      const raw = item.data;
-      const d = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-      const time = new Date(item.created_at).toLocaleString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-      if (item.type === 'movie_added') {
-        const safeTitle = (d.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        const poster = d.poster && d.poster !== 'N/A' ? d.poster : '';
-        const stars = d.rating ? '⭐'.repeat(Math.min(d.rating, 5)) : '';
-        return `<div class="feed-card">
-          <div class="feed-poster-wrap">
-            <img src="${poster}" onerror="this.style.display='none'" class="feed-poster">
-          </div>
-          <div class="feed-body">
-            <div class="feed-meta">
-              <span class="feed-avatar">${item.avatar || '🎬'}</span>
-              <span class="feed-username">${item.username || ''}</span>
-              <span class="feed-action">added a movie</span>
-            </div>
-            <div class="feed-title">${d.title || 'a movie'}</div>
-            ${stars ? `<div class="feed-stars">${stars}</div>` : ''}
-            <div class="feed-time">${time}</div>
-          </div>
-          <button onclick="addMovieFromFeed('${safeTitle}')" class="feed-add-btn">+ Later</button>
-        </div>`;
-      }
-      return '';
-    }).join('');
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--text-muted); font-size:0.85em;">Could not load feed.</div>`;
   }
+  // All attempts failed — show retry button
+  const errHTML = `<div style="color:var(--text-muted);font-size:0.85em;text-align:center;padding:20px 0;">
+    Couldn't load data.<br>
+    <button onclick="loadHome()" style="margin-top:10px;padding:7px 18px;background:var(--green);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;">Retry</button>
+  </div>`;
+  if (statsEl) statsEl.innerHTML = errHTML;
+  if (podium)  podium.innerHTML  = '';
+  if (trendEl) trendEl.innerHTML = '';
 }
 
 async function addMovieFromFeed(title) {
@@ -722,26 +743,11 @@ async function addMovieFromFeed(title) {
   } catch(e) {}
 }
 
-async function loadHomeTrending() {
-  const el = document.getElementById('homeTrending');
-  try {
-    const res = await fetch('/api/home/trending');
-    const movies = await res.json();
-    el.innerHTML = `<div class="trending-list">` +
-      movies.map((m, i) => `
-        <div class="trending-card">
-          <div class="trending-rank">${i + 1}</div>
-          <img src="${m.poster || ''}" onerror="this.style.display='none'" class="trending-poster">
-          <div class="trending-info">
-            <div class="trending-title">${m.title}</div>
-            <div class="trending-meta">${m.year || ''}</div>
-          </div>
-          <div class="trending-rating">⭐ ${m.rating}</div>
-          <button onclick="addMovieFromFeed('${(m.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')" class="trending-add-btn">+ Later</button>
-        </div>
-      `).join('') + `</div>`;
-  } catch(e) {}
-}
+// Keep old individual loaders for leaderboard (used elsewhere)
+async function loadLeaderboard() {}
+async function loadHomeStats() {}
+async function loadHomeFeed() {}
+async function loadHomeTrending() {}
 
 const moodMap = {
   chill:    ['Drama', 'Romance'],
