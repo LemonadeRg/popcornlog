@@ -1506,8 +1506,6 @@ async function loadProfile() {
     document.getElementById('profileUsername').textContent = data.username;
     document.getElementById('profileEmail').textContent = data.email;
     document.getElementById('profileBio').value = data.bio;
-    const unInput = document.getElementById('newUsernameInput');
-    if (unInput) unInput.value = data.username;
     document.getElementById('statMovies').textContent = data.totalMovies;
     document.getElementById('statAvg').textContent = data.avgRating;
     document.getElementById('statWatchlist').textContent = data.watchlistCount;
@@ -1649,6 +1647,19 @@ async function saveProfile() {
   }
 }
 
+function toggleUsernameEdit() {
+  const row = document.getElementById('usernameEditRow');
+  const input = document.getElementById('newUsernameInput');
+  const isHidden = row.style.display === 'none' || row.style.display === '';
+  row.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    input.value = document.getElementById('profileUsername').textContent;
+    input.focus();
+    input.select();
+  }
+  document.getElementById('usernameMsg').textContent = '';
+}
+
 async function changeUsername() {
   const input = document.getElementById('newUsernameInput');
   const msg = document.getElementById('usernameMsg');
@@ -1662,10 +1673,10 @@ async function changeUsername() {
   });
   const data = await res.json();
   if (res.ok) {
-    msg.style.color = 'var(--green)'; msg.textContent = '✅ Username updated!';
     document.getElementById('profileUsername').textContent = data.username;
-    input.value = data.username;
-    setTimeout(() => { msg.textContent = ''; }, 3000);
+    document.getElementById('usernameEditRow').style.display = 'none';
+    msg.textContent = '';
+    showAlert('✅ Username updated!');
   } else {
     msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + data.error;
   }

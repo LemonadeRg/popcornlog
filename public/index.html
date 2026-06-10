@@ -225,10 +225,28 @@
                 <div id="profileAvatar" style="font-size:4em; cursor:pointer; width:72px; height:72px; background:var(--surface2); border:3px solid var(--surface); border-radius:50%; display:flex; align-items:center; justify-content:center;" onclick="openAvatarPicker()" title="Click to change avatar">🎬</div>
                 <div id="profileActiveBadge" style="position:absolute; bottom:-2px; right:-2px; font-size:1.3em; display:none;"></div>
               </div>
-              <div style="margin-top:12px;">
-                <h2 id="profileUsername" style="color:var(--text); font-size:1.5em; font-weight:800; margin-bottom:2px;"></h2>
-                <p id="profileEmail" style="color:var(--text-dim); font-size:0.85em; margin-bottom:4px;"></p>
-                <p id="profileJoinDate" style="color:var(--text-muted); font-size:0.75em; text-transform:uppercase; letter-spacing:1px;"></p>
+              <div style="margin-top:12px; flex:1;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <h2 id="profileUsername" style="color:var(--text); font-size:1.5em; font-weight:800; margin:0;"></h2>
+                  <span onclick="toggleUsernameEdit()" title="Edit username" style="cursor:pointer; font-size:1em; opacity:0.5; transition:opacity 0.15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">✏️</span>
+                </div>
+                <div id="usernameEditRow" style="display:none; margin-top:6px; display:none;">
+                  <div style="display:flex; gap:8px;">
+                    <input type="text" id="newUsernameInput" maxlength="30"
+                      style="padding:7px 12px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.88em; width:160px;"
+                      onkeydown="if(event.key==='Enter')changeUsername(); if(event.key==='Escape')toggleUsernameEdit()">
+                    <button onclick="changeUsername()" style="padding:7px 14px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.8em; font-family:inherit;">Save</button>
+                    <button onclick="toggleUsernameEdit()" style="padding:7px 12px; background:var(--surface2); color:var(--text-dim); border:none; border-radius:8px; cursor:pointer; font-size:0.8em; font-family:inherit;">✕</button>
+                  </div>
+                  <div id="usernameMsg" style="margin-top:5px; font-size:0.8em; min-height:16px;"></div>
+                </div>
+                <p id="profileEmail" style="color:var(--text-dim); font-size:0.85em; margin:4px 0 2px;"></p>
+                <p id="profileJoinDate" style="color:var(--text-muted); font-size:0.75em; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px;"></p>
+                <textarea id="profileBio" placeholder="Write a short bio..." rows="2"
+                  style="width:100%; max-width:340px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-family:inherit; font-size:0.83em; resize:vertical; box-sizing:border-box;"></textarea>
+                <div style="margin-top:6px;">
+                  <button onclick="saveProfile()" style="padding:6px 18px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.78em; font-family:inherit;">Save Profile</button>
+                </div>
               </div>
             </div>
           </div>
@@ -249,18 +267,6 @@
             </div>
           </div>
 
-          <!-- Change Username -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
-            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">✏️ Change Username</div>
-            <div style="display:flex; gap:10px;">
-              <input type="text" id="newUsernameInput" placeholder="New username" maxlength="30"
-                style="flex:1; padding:10px 14px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.92em;"
-                onkeydown="if(event.key==='Enter')changeUsername()">
-              <button onclick="changeUsername()" style="padding:10px 20px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit;">Save</button>
-            </div>
-            <div id="usernameMsg" style="margin-top:8px; font-size:0.82em; min-height:18px;"></div>
-          </div>
-
           <!-- Favorite Movie pin -->
           <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
             <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📌 Favorite Movie</div>
@@ -268,14 +274,6 @@
             <select id="favMovieSelect" style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-family:inherit; font-size:0.9em;">
               <option value="">— None —</option>
             </select>
-          </div>
-
-          <!-- Bio -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
-            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">✍️ Bio</div>
-            <textarea id="profileBio" placeholder="Write something about yourself..." rows="3"
-              style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:12px; font-family:inherit; font-size:0.92em; resize:vertical;"></textarea>
-            <button onclick="saveProfile()" style="margin-top:12px; padding:9px 24px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Save Profile</button>
           </div>
 
           <!-- Badges -->
