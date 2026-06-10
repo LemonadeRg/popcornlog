@@ -1438,28 +1438,25 @@ app.get('/api/friends/:userId/profile', requireAuth, async (req, res) => {
     if (check.rows.length === 0) return res.status(403).json({ error: 'Not friends' });
 
     const userRes = await db.query(
-      'SELECT id, username, avatar, bio, created_at FROM users WHERE id=$1',
+      'SELECT id, username, avatar, bio, created_at, active_badge, banner_color, favorite_movie_id FROM users WHERE id=$1',
       [friendId]
     );
     const user = userRes.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const statsRes = await db.query(
-      'SELECT COUNT(*) as total, AVG(rating) as avg_rating FROM movies WHERE user_id=$1',
-      [friendId]
-    );
-    const wlRes = await db.query(
-      'SELECT COUNT(*) as count FROM watchlist WHERE user_id=$1',
-      [friendId]
-    );
-    const topRes = await db.query(
-      'SELECT COUNT(*) as count FROM movies WHERE user_id=$1 AND rating=5',
-      [friendId]
-    );
-    const recentRes = await db.query(
-      'SELECT title, "posterUrl", rating FROM movies WHERE user_id=$1 ORDER BY created_at DESC LIMIT 4',
-      [friendId]
-    );
+    const [statsRes, wlRes, topRes, recentRes, badgesRes] = await Promise.all([
+      db.query('SELECT COUNT(*) as total, AVG(rating) as avg_rating FROM movies WHERE user_id=$1', [friendId]),
+      db.query('SELECT COUNT(*) as count FROM watchlist WHERE user_id=$1', [friendId]),
+      db.query('SELECT COUNT(*) as count FROM movies WHERE user_id=$1 AND rating=5', [friendId]),
+      db.query('SELECT title, "posterUrl", rating FROM movies WHERE user_id=$1 ORDER BY created_at DESC LIMIT 6', [friendId]),
+      db.query('SELECT badge_id FROM user_badges WHERE user_id=$1', [friendId])
+    ]);
+
+    let favMovie = null;
+    if (user.favorite_movie_id) {
+      const favRes = await db.query('SELECT title, "posterUrl", year, rating, genres FROM movies WHERE id=$1', [user.favorite_movie_id]);
+      if (favRes.rows.length > 0) favMovie = favRes.rows[0];
+    }
 
     const stats = statsRes.rows[0];
     res.json({
@@ -1467,6 +1464,10 @@ app.get('/api/friends/:userId/profile', requireAuth, async (req, res) => {
       avatar: user.avatar || '🎬',
       bio: user.bio || '',
       joinDate: user.created_at,
+      bannerColor: user.banner_color || '#1c2228',
+      activeBadge: user.active_badge || null,
+      badges: badgesRes.rows.map(r => r.badge_id),
+      favMovie,
       totalMovies: parseInt(stats.total) || 0,
       avgRating: stats.avg_rating ? parseFloat(stats.avg_rating).toFixed(1) : 'N/A',
       watchlistCount: parseInt(wlRes.rows[0].count) || 0,

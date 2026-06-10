@@ -2911,31 +2911,65 @@ async function viewFriendProfile(friendId, username) {
     const d = await res.json();
     if (!res.ok) { showAlert('❌ ' + d.error); closeFriendProfile(); return; }
 
+    // Avatar + badge
     document.getElementById('fpAvatar').textContent = d.avatar;
+    const fpBadgeEl = document.getElementById('fpActiveBadge');
+    if (d.activeBadge && BADGE_EMOJI[d.activeBadge]) {
+      fpBadgeEl.textContent = BADGE_EMOJI[d.activeBadge];
+      fpBadgeEl.style.display = 'block';
+    } else { fpBadgeEl.style.display = 'none'; }
+
     document.getElementById('fpUsername').textContent = d.username;
     document.getElementById('fpJoinDate').textContent = `Member since ${new Date(d.joinDate).toLocaleDateString('en-US', { year:'numeric', month:'long' })}`;
 
-    if (d.bio) {
-      document.getElementById('fpBio').textContent = d.bio;
-      document.getElementById('fpBioBox').style.display = 'block';
-    }
+    // Banner
+    const fpBanner = document.getElementById('fpBanner');
+    fpBanner.style.backgroundImage = '';
+    fpBanner.style.background = d.bannerColor || '#1c2228';
 
+    // Bio
+    const fpBio = document.getElementById('fpBio');
+    if (d.bio) { fpBio.textContent = d.bio; fpBio.style.display = 'block'; }
+    else { fpBio.style.display = 'none'; }
+
+    // Stats
     document.getElementById('fpMovies').textContent = d.totalMovies;
     document.getElementById('fpAvgRating').textContent = d.avgRating;
     document.getElementById('fpWatchlist').textContent = d.watchlistCount;
     document.getElementById('fpTopRated').textContent = d.topRatedCount;
 
-    // Recent movies posters
+    // Fav movie
+    const fpFavBox = document.getElementById('fpFavMovieBox');
+    if (d.favMovie) {
+      fpFavBox.style.display = 'block';
+      document.getElementById('fpFavPoster').src = d.favMovie.posterUrl || '';
+      document.getElementById('fpFavTitle').textContent = d.favMovie.title;
+      document.getElementById('fpFavMeta').textContent = `${d.favMovie.year || ''} · ${d.favMovie.genres || ''}`;
+    } else { fpFavBox.style.display = 'none'; }
+
+    // Badges
+    const fpBadgesBox = document.getElementById('fpBadgesBox');
+    const fpBadgesRow = document.getElementById('fpBadgesRow');
+    if (d.badges && d.badges.length > 0) {
+      fpBadgesBox.style.display = 'block';
+      fpBadgesRow.innerHTML = d.badges.map(bid => {
+        const emoji = BADGE_EMOJI[bid] || '🏅';
+        const isActive = bid === d.activeBadge;
+        return `<span title="${bid}" style="font-size:1.5em; background:var(--surface); border:2px solid ${isActive ? 'var(--green)' : 'var(--border)'}; border-radius:8px; padding:4px 8px;">${emoji}</span>`;
+      }).join('');
+    } else { fpBadgesBox.style.display = 'none'; }
+
+    // Recent movies
     const recentEl = document.getElementById('fpRecentMovies');
     if (d.recentMovies.length === 0) {
       recentEl.innerHTML = `<p style="color:var(--text-muted); font-size:0.85em;">No movies yet</p>`;
     } else {
       recentEl.innerHTML = d.recentMovies.map(m => `
-        <div style="text-align:center;">
+        <div style="text-align:center;" title="${m.title}">
           <img src="${m.posterUrl}" alt="${m.title}"
-            style="width:58px; height:84px; object-fit:cover; border-radius:4px; border:2px solid var(--border);"
-            onerror="this.style.display='none'" title="${m.title}">
-          <div style="font-size:0.7em; color:var(--text-muted); margin-top:4px;">${'⭐'.repeat(m.rating||0)}</div>
+            style="width:50px; height:72px; object-fit:cover; border-radius:4px; border:2px solid var(--border);"
+            onerror="this.style.display='none'">
+          <div style="font-size:0.65em; color:var(--text-muted); margin-top:3px;">${'⭐'.repeat(m.rating||0)}</div>
         </div>
       `).join('');
     }
