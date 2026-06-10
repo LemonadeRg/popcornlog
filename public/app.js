@@ -1498,9 +1498,13 @@ async function loadProfile() {
     const joined = new Date(data.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('profileJoinDate').textContent = `Member since ${joined}`;
 
-    // Banner — use fav movie poster if available, else color
+    // Banner — use fav movie TMDB backdrop if available, else color
     currentBannerColor = data.bannerColor || '#1c2228';
-    applyBanner(currentBannerColor, data.favoriteMovie?.posterUrl || null);
+    if (data.favoriteMovie) {
+      await applyBannerFromMovie(data.favoriteMovie);
+    } else {
+      applyBanner(currentBannerColor, null);
+    }
 
     // Active badge
     const badgeEl = document.getElementById('profileActiveBadge');
@@ -1518,10 +1522,14 @@ async function loadProfile() {
       sel.innerHTML = '<option value="">— None —</option>' +
         (allMovies || []).map(m => `<option value="${m.id}" ${data.favoriteMovie?.id === m.id ? 'selected' : ''}>${m.title}${m.year ? ' ('+m.year+')' : ''}</option>`).join('');
       // Live banner preview when dropdown changes
-      sel.onchange = () => {
+      sel.onchange = async () => {
         const picked = (allMovies||[]).find(m => m.id == sel.value);
-        applyBanner(currentBannerColor, picked?.posterUrl || null);
         renderFavMovie(picked ? { id: picked.id, title: picked.title, posterUrl: picked.posterUrl, year: picked.year, rating: picked.rating, genres: picked.genres } : null);
+        if (picked) {
+          await applyBannerFromMovie(picked);
+        } else {
+          applyBanner(currentBannerColor, null);
+        }
       };
     }
 
@@ -1538,7 +1546,7 @@ function applyBanner(color, posterUrl) {
     // Movie poster as banner with dark gradient overlay so text stays readable
     banner.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 100%), url('${posterUrl}')`;
     banner.style.backgroundSize = 'cover';
-    banner.style.backgroundPosition = 'center 30%';
+    banner.style.backgroundPosition = 'center center';
     banner.style.backgroundColor = '';
   } else {
     banner.style.backgroundImage = `linear-gradient(135deg, ${color} 0%, ${color}cc 60%, #E8B84B22 100%)`;
@@ -1548,6 +1556,17 @@ function applyBanner(color, posterUrl) {
   }
   banner.onmouseenter = () => { const h = banner.querySelector('.banner-edit-hint'); if(h) h.style.opacity='1'; };
   banner.onmouseleave = () => { const h = banner.querySelector('.banner-edit-hint'); if(h) h.style.opacity='0'; };
+}
+
+// Fetch TMDB backdrop (wide landscape) and use it as banner
+async function applyBannerFromMovie(movie) {
+  try {
+    const r = await fetch(`/api/backdrop?title=${encodeURIComponent(movie.title)}&year=${movie.year||''}`);
+    const d = await r.json();
+    applyBanner(currentBannerColor, d.backdrop || movie.posterUrl || null);
+  } catch(e) {
+    applyBanner(currentBannerColor, movie.posterUrl || null);
+  }
 }
 
 function renderFavMovie(movie) {
@@ -1605,7 +1624,8 @@ async function saveProfile() {
   if (res.ok) {
     const selMovie = favoriteMovieId ? (allMovies||[]).find(m => m.id == favoriteMovieId) : null;
     renderFavMovie(selMovie ? { id: selMovie.id, title: selMovie.title, posterUrl: selMovie.posterUrl, year: selMovie.year, rating: selMovie.rating, genres: selMovie.genres } : null);
-    applyBanner(currentBannerColor, selMovie?.posterUrl || null);
+    if (selMovie) await applyBannerFromMovie(selMovie);
+    else applyBanner(currentBannerColor, null);
     showAlert('✅ Profile saved!');
   } else {
     showAlert('❌ ' + data.error);

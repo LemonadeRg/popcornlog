@@ -163,6 +163,21 @@ async function initDB() {
 initDB().catch(err => console.error('DB init error:', err));
 
 // ===== PING (wake-up endpoint) =====
+// Fetch TMDB backdrop for a movie title (used for profile banner)
+app.get('/api/backdrop', async (req, res) => {
+  const { title, year } = req.query;
+  if (!title) return res.json({ backdrop: null });
+  try {
+    const search = await fetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&language=en-US${year ? '&year='+year : ''}`);
+    const data = await search.json();
+    const movie = data.results?.[0];
+    if (!movie?.backdrop_path) return res.json({ backdrop: null });
+    res.json({ backdrop: `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` });
+  } catch(e) {
+    res.json({ backdrop: null });
+  }
+});
+
 app.get('/api/ping', async (req, res) => {
   try {
     await db.query('SELECT 1');
