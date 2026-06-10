@@ -356,7 +356,7 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
       db.query(`SELECT genres as genre, COUNT(*) as cnt FROM movies WHERE user_id=$1 AND genres IS NOT NULL AND genres != '' GROUP BY genres ORDER BY cnt DESC LIMIT 1`, [userId]),
       db.query(`SELECT created_at::date as day FROM movies WHERE user_id=$1 ORDER BY created_at DESC`, [userId]),
       db.query(`SELECT CASE WHEN from_user_id=$1 THEN to_user_id ELSE from_user_id END as friend_id FROM friend_requests WHERE (from_user_id=$1 OR to_user_id=$1) AND status='accepted'`, [userId]),
-      db.query(`SELECT u.id, u.username, u.avatar, COUNT(m.id) AS movie_count FROM users u LEFT JOIN movies m ON m.user_id = u.id GROUP BY u.id, u.username, u.avatar ORDER BY movie_count DESC LIMIT 3`)
+      db.query(`SELECT u.id, u.username, u.avatar, u.active_badge, COUNT(m.id) AS movie_count FROM users u LEFT JOIN movies m ON m.user_id = u.id GROUP BY u.id, u.username, u.avatar, u.active_badge ORDER BY movie_count DESC LIMIT 3`)
     ]);
     const val = (i, fallback) => results[i].status === 'fulfilled' ? results[i].value : { rows: fallback || [] };
     const moviesRes     = val(0, [{total:0, minutes:0}]);
@@ -385,7 +385,7 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
     if (friendIds.length) {
       try {
         const feedRes = await db.query(
-          `SELECT fa.*, u.username, u.avatar FROM friend_activity fa JOIN users u ON u.id = fa.from_user_id WHERE fa.from_user_id = ANY($1) ORDER BY fa.created_at DESC LIMIT 30`,
+          `SELECT fa.*, u.username, u.avatar, u.active_badge FROM friend_activity fa JOIN users u ON u.id = fa.from_user_id WHERE fa.from_user_id = ANY($1) ORDER BY fa.created_at DESC LIMIT 30`,
           [friendIds]
         );
         feed = feedRes.rows;
@@ -461,7 +461,7 @@ app.get('/api/home/feed', requireAuth, async (req, res) => {
     const friendIds = friendsRes.rows.map(r => r.friend_id);
     if (!friendIds.length) return res.json([]);
     const feed = await db.query(
-      `SELECT fa.*, u.username, u.avatar FROM friend_activity fa
+      `SELECT fa.*, u.username, u.avatar, u.active_badge FROM friend_activity fa
        JOIN users u ON u.id = fa.from_user_id
        WHERE fa.from_user_id = ANY($1)
        ORDER BY fa.created_at DESC LIMIT 30`,

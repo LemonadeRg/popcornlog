@@ -644,7 +644,7 @@ function renderHomeData(d) {
         const pct = lb[0].movie_count > 0 ? Math.round((u.movie_count / lb[0].movie_count) * 100) : 0;
         return `<div class="leaderboard-card">
           <div class="lb-rank" style="color:${rankColors[i] || 'var(--text-muted)'}">${['🥇','🥈','🥉'][i] || i+1}</div>
-          <div class="lb-avatar">${u.avatar || '🎬'}</div>
+          <div class="lb-avatar">${avatarWithBadge(u.avatar, u.active_badge, '1.8em')}</div>
           <div class="lb-info">
             <div class="lb-name">${u.username}</div>
             <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${pct}%;background:${rankColors[i]}"></div></div>
@@ -673,7 +673,7 @@ function renderHomeData(d) {
             <div class="feed-poster-wrap"><img src="${poster}" onerror="this.style.display='none'" class="feed-poster"></div>
             <div class="feed-body">
               <div class="feed-meta">
-                <span class="feed-avatar">${item.avatar||'🎬'}</span>
+                <span class="feed-avatar">${avatarWithBadge(item.avatar, item.active_badge, '1.3em')}</span>
                 <span class="feed-username">${item.username||''}</span>
                 <span class="feed-action">added a movie</span>
               </div>
@@ -959,7 +959,7 @@ async function loadLeaderboard() {
     podium.innerHTML = top.map((u, i) => `
       <div class="leaderboard-card" style="border-color:${rankColors[i]}40; background:${rankBg[i]};">
         <div class="lb-rank" style="color:${rankColors[i]};">${medals[i]}</div>
-        <div class="lb-avatar">${u.avatar || '🎬'}</div>
+        <div class="lb-avatar">${avatarWithBadge(u.avatar, u.active_badge, '1.8em')}</div>
         <div class="lb-username">${u.username}</div>
         <div class="lb-count">${u.movie_count} film${u.movie_count == 1 ? '' : 's'}</div>
         <div class="lb-bar-track">
@@ -1688,12 +1688,64 @@ function deleteAccount() {
 
 const AVATARS = ['🎬','🍿','🎥','🎞️','🦁','🐺','🦊','🐻','🐼','🎭','👻','🤖','🦸','🧙','🧛','🎃','🌟','🔥','💎','🎮','🏆','🎯','🎸','🎨'];
 
-function openAvatarPicker() {
-  document.getElementById('avatarGrid').innerHTML = AVATARS.map(e =>
-    `<span onclick="selectAvatar('${e}')" style="font-size:2em; cursor:pointer; padding:8px; border-radius:6px; border:2px solid transparent; transition:all 0.15s; display:block;"
-      onmouseover="this.style.borderColor='var(--green)'; this.style.background='var(--surface2)'"
-      onmouseout="this.style.borderColor='transparent'; this.style.background='transparent'">${e}</span>`
+// Level-locked avatar unlocks — avatar emoji + min level required
+const LEVEL_AVATARS = [
+  { emoji: '🌙', level: 2,  label: 'Night Owl' },
+  { emoji: '⚡', level: 3,  label: 'Electric' },
+  { emoji: '🎖️', level: 4,  label: 'Decorated' },
+  { emoji: '🦅', level: 5,  label: 'Eagle Eye' },
+  { emoji: '🌊', level: 6,  label: 'Wave' },
+  { emoji: '🔮', level: 7,  label: 'Oracle' },
+  { emoji: '🐉', level: 8,  label: 'Dragon' },
+  { emoji: '👑', level: 10, label: 'Royalty' },
+  { emoji: '🌌', level: 12, label: 'Galaxy' },
+  { emoji: '🦄', level: 15, label: 'Unicorn' },
+  { emoji: '💀', level: 20, label: 'Legend' },
+  { emoji: '🌠', level: 25, label: 'Star Lord' },
+];
+
+// Helper: render avatar + badge bubble together
+function avatarWithBadge(avatar, activeBadge, size = '1.6em') {
+  if (!activeBadge) return `<span style="font-size:${size};">${avatar || '🎬'}</span>`;
+  return `<span style="position:relative;display:inline-block;">
+    <span style="font-size:${size};">${avatar || '🎬'}</span>
+    <span style="position:absolute;bottom:-3px;right:-6px;font-size:calc(${size} * 0.55);line-height:1;">${activeBadge}</span>
+  </span>`;
+}
+
+async function openAvatarPicker() {
+  // Get current game level to show unlocked avatars
+  let currentLevel = 1;
+  try {
+    const r = await fetch('/api/games/profile');
+    const gs = await r.json();
+    currentLevel = gs.level || 1;
+  } catch(e) {}
+
+  const baseGrid = AVATARS.map(e =>
+    `<span onclick="selectAvatar('${e}')" title="Select"
+      style="font-size:2em;cursor:pointer;padding:8px;border-radius:6px;border:2px solid transparent;transition:all 0.15s;display:block;"
+      onmouseover="this.style.borderColor='var(--green)';this.style.background='var(--surface2)'"
+      onmouseout="this.style.borderColor='transparent';this.style.background='transparent'">${e}</span>`
   ).join('');
+
+  const levelGrid = LEVEL_AVATARS.map(a => {
+    const unlocked = currentLevel >= a.level;
+    return unlocked
+      ? `<span onclick="selectAvatar('${a.emoji}')" title="🔓 ${a.label} (Level ${a.level})"
+          style="font-size:2em;cursor:pointer;padding:8px;border-radius:6px;border:2px solid #E8B84B44;transition:all 0.15s;display:block;position:relative;"
+          onmouseover="this.style.borderColor='#E8B84B';this.style.background='var(--surface2)'"
+          onmouseout="this.style.borderColor='#E8B84B44';this.style.background='transparent'">${a.emoji}</span>`
+      : `<span title="🔒 ${a.label} — Unlock at Level ${a.level}"
+          style="font-size:2em;padding:8px;border-radius:6px;border:2px solid var(--border);display:block;opacity:0.35;cursor:not-allowed;filter:grayscale(1);">${a.emoji}</span>`;
+  }).join('');
+
+  document.getElementById('avatarGrid').innerHTML = `
+    <div style="font-size:0.72em;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);font-weight:700;margin-bottom:10px;grid-column:1/-1;">Standard</div>
+    ${baseGrid}
+    <div style="font-size:0.72em;text-transform:uppercase;letter-spacing:2px;color:#E8B84B;font-weight:700;margin:14px 0 10px;grid-column:1/-1;">🏆 Level Rewards · You are Level ${currentLevel}</div>
+    ${levelGrid}
+  `;
   document.getElementById('avatarModal').classList.add('active');
 }
 
@@ -1785,11 +1837,34 @@ function closeGame() {
 
 async function awardGameXP(xp, gameType) {
   try {
-    await fetch('/api/games/xp', {
+    const prevLevel = await fetch('/api/games/profile').then(r=>r.json()).then(g=>g.level).catch(()=>1);
+    const res = await fetch('/api/games/xp', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ xp, gameType, won: true })
     });
+    const data = await res.json();
+    if (data.level > prevLevel) {
+      showLevelUpToast(data.level);
+    }
   } catch(e) {}
+}
+
+function showLevelUpToast(level) {
+  const unlock = LEVEL_AVATARS.find(a => a.level === level);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s ease;';
+  overlay.innerHTML = `<div style="background:#1c2228;border:2px solid #E8B84B;border-radius:20px;padding:40px 48px;text-align:center;max-width:340px;animation:authCardIn 0.4s ease;">
+    <div style="font-size:3em;margin-bottom:8px;">⚡</div>
+    <div style="font-size:1.6em;font-weight:900;color:#E8B84B;margin-bottom:6px;">Level ${level}!</div>
+    <div style="color:var(--text-dim);font-size:0.92em;margin-bottom:${unlock?'16px':'24px'};">You leveled up in Cinema Games!</div>
+    ${unlock ? `<div style="background:#E8B84B18;border:1px solid #E8B84B44;border-radius:12px;padding:14px;margin-bottom:20px;">
+      <div style="font-size:2.2em;margin-bottom:4px;">${unlock.emoji}</div>
+      <div style="color:#E8B84B;font-weight:700;font-size:0.9em;">New avatar unlocked!</div>
+      <div style="color:var(--text-muted);font-size:0.78em;margin-top:2px;">${unlock.label} · Available in your profile</div>
+    </div>` : ''}
+    <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:10px 28px;background:#E8B84B;color:#000;border:none;border-radius:8px;font-weight:800;font-size:1em;cursor:pointer;font-family:inherit;">Awesome! 🎬</button>
+  </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ===== MOVIE BATTLES =====
