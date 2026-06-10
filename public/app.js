@@ -47,7 +47,7 @@ window.addEventListener('load', async function() {
     currentIsAdmin = data.isAdmin || false;
     if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
     showApp();
-    loadMovies();
+    await loadMovies();   // wait for server to warm up first
     showSection('home');
   } else {
     showAuth();
@@ -575,9 +575,9 @@ async function loadHomeFeed() {
         const poster = d.poster && d.poster !== 'N/A' ? d.poster : '';
         const stars = d.rating ? '⭐'.repeat(Math.min(d.rating, 5)) : '';
         return `<div class="home-feed-item">
-          <img src="${poster}" onerror="this.style.display='none'" style="width:40px; height:58px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--surface2);">
-          <div style="flex:1; min-width:0; overflow:hidden;">
-            <div style="font-size:0.88em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>${item.avatar || '🎬'} ${item.username || ''}</strong> added <strong>${d.title || ''}</strong></div>
+          <img src="${poster}" onerror="this.style.display='none'" style="width:40px; height:58px; object-fit:cover; border-radius:5px; flex-shrink:0;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.88em; color:var(--text);"><strong>${item.avatar || '🎬'} ${item.username || ''}</strong> added <strong>${d.title || 'a movie'}</strong></div>
             ${stars ? `<div style="color:var(--green); font-size:0.78em; margin-top:2px;">${stars}</div>` : ''}
             <div style="color:var(--text-muted); font-size:0.75em; margin-top:3px;">${time}</div>
           </div>
