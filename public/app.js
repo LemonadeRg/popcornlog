@@ -632,7 +632,8 @@ async function pickMood(mood) {
     const genres = moodMap[mood];
     const genre = genres[Math.floor(Math.random() * genres.length)];
     const res = await fetch(`/api/recommendations/${genre}`);
-    const movies = await res.json();
+    const data = await res.json();
+    const movies = data.results || data;
     if (!movies.length) { el.innerHTML = `<div style="color:var(--text-muted); font-size:0.83em;">Nothing found. Try again!</div>`; return; }
     const pick = movies[Math.floor(Math.random() * movies.length)];
     el.innerHTML = `
@@ -641,7 +642,7 @@ async function pickMood(mood) {
         <div style="flex:1;">
           <div style="font-weight:700; color:var(--text); font-size:0.9em;">${pick.title}</div>
           <div style="color:var(--text-muted); font-size:0.75em; margin:3px 0;">${pick.year || ''} · ${genre}</div>
-          <div style="color:var(--text-dim); font-size:0.75em; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${pick.plot || ''}</div>
+          <div style="color:var(--text-dim); font-size:0.75em; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${pick.overview || pick.plot || ''}</div>
           <div style="display:flex; gap:6px; margin-top:8px;">
             <button onclick="addMovieFromFeed('${(pick.title||'').replace(/'/g,"\\'")}')
 " style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit;">+ Watch Later</button>
