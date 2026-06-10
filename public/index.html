@@ -209,47 +209,78 @@
 
       <!-- PROFILE SECTION -->
       <div id="profileSection" style="display:none;">
-        <div style="max-width:600px; margin:0 auto;">
+        <div style="max-width:640px; margin:0 auto;">
 
-          <!-- Avatar + Name -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; margin-bottom:20px; text-align:center;">
-            <div style="position:relative; display:inline-block; margin-bottom:12px;">
-              <div id="profileAvatar" style="font-size:5em; cursor:pointer;" onclick="openAvatarPicker()" title="Click to change avatar">🎬</div>
-              <div id="profileActiveBadge" style="position:absolute; bottom:-4px; right:-4px; font-size:1.4em; display:none;"></div>
+          <!-- Banner + Avatar card -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; margin-bottom:20px; overflow:hidden;">
+            <!-- Banner -->
+            <div id="profileBanner" style="height:130px; position:relative; cursor:pointer;" onclick="openBannerPicker()" title="Click to change banner">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;" class="banner-edit-hint">
+                <span style="background:rgba(0,0,0,0.6);color:#fff;padding:6px 14px;border-radius:20px;font-size:0.78em;font-weight:700;">✏️ Change banner</span>
+              </div>
             </div>
-            <h2 id="profileUsername" style="color:var(--text); font-size:1.6em; margin-bottom:4px;"></h2>
-            <p id="profileEmail" style="color:var(--text-dim); font-size:0.88em; margin-bottom:16px;"></p>
-            <p id="profileJoinDate" style="color:var(--text-muted); font-size:0.8em; text-transform:uppercase; letter-spacing:1px;"></p>
+            <!-- Avatar row -->
+            <div style="padding:0 24px 24px; position:relative;">
+              <div style="position:relative; display:inline-block; margin-top:-36px;">
+                <div id="profileAvatar" style="font-size:4em; cursor:pointer; width:72px; height:72px; background:var(--surface2); border:3px solid var(--surface); border-radius:50%; display:flex; align-items:center; justify-content:center;" onclick="openAvatarPicker()" title="Click to change avatar">🎬</div>
+                <div id="profileActiveBadge" style="position:absolute; bottom:-2px; right:-2px; font-size:1.3em; display:none;"></div>
+              </div>
+              <div style="margin-top:12px;">
+                <h2 id="profileUsername" style="color:var(--text); font-size:1.5em; font-weight:800; margin-bottom:2px;"></h2>
+                <p id="profileEmail" style="color:var(--text-dim); font-size:0.85em; margin-bottom:4px;"></p>
+                <p id="profileJoinDate" style="color:var(--text-muted); font-size:0.75em; text-transform:uppercase; letter-spacing:1px;"></p>
+              </div>
+            </div>
           </div>
 
-          <!-- Badges -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
-            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">🏅 Badges</h3>
-            <div id="badgesGrid" style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px;"></div>
-          </div>
-
-          <!-- Stats -->
+          <!-- Stats row -->
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
               <div id="statMovies" style="font-size:2em; font-weight:800; color:var(--green);">0</div>
-              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Movies</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Movies</div>
             </div>
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
-              <div id="statAvg" style="font-size:2em; font-weight:800; color:var(--green);">-</div>
-              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Avg Rating</div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+              <div id="statAvg" style="font-size:2em; font-weight:800; color:var(--orange);">-</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Avg Rating</div>
             </div>
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
-              <div id="statWatchlist" style="font-size:2em; font-weight:800; color:var(--green);">0</div>
-              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Watchlist</div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+              <div id="statWatchlist" style="font-size:2em; font-weight:800; color:#7c6af7;">0</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Watchlist</div>
             </div>
+          </div>
+
+          <!-- Favorite Movie pin -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📌 Favorite Movie</div>
+            <div id="favMovieDisplay" style="margin-bottom:12px;"></div>
+            <select id="favMovieSelect" style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-family:inherit; font-size:0.9em;">
+              <option value="">— None —</option>
+            </select>
           </div>
 
           <!-- Bio -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:20px;">
-            <h3 style="color:var(--text-dim); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Bio</h3>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">✍️ Bio</div>
             <textarea id="profileBio" placeholder="Write something about yourself..." rows="3"
-              style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:12px; font-family:inherit; font-size:0.95em; resize:vertical;"></textarea>
-            <button onclick="saveProfile()" style="margin-top:12px; padding:9px 24px; background:var(--green); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Save</button>
+              style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:12px; font-family:inherit; font-size:0.92em; resize:vertical;"></textarea>
+            <button onclick="saveProfile()" style="margin-top:12px; padding:9px 24px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Save Profile</button>
+          </div>
+
+          <!-- Badges -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:16px;">🏅 Badges</div>
+            <div id="badgesGrid" style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px;"></div>
+          </div>
+
+          <!-- Banner picker modal (hidden) -->
+          <div id="bannerPickerModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; width:340px;">
+              <div style="font-weight:800; color:var(--text); margin-bottom:18px; font-size:1.05em;">🎨 Pick a banner color</div>
+              <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:20px;" id="bannerColorGrid"></div>
+              <div style="display:flex; gap:10px;">
+                <button onclick="closeBannerPicker()" style="flex:1; padding:9px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600;">Cancel</button>
+              </div>
+            </div>
           </div>
 
           <!-- Change Password -->

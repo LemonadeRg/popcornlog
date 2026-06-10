@@ -133,6 +133,8 @@ async function initDB() {
 
   // Add active_badge column if not exists
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_badge TEXT DEFAULT NULL`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_color TEXT DEFAULT '#1c2228'`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_movie_id INTEGER REFERENCES movies(id) ON DELETE SET NULL`);
 
   // Friend activity feed (for movie notifications)
   await db.query(`
@@ -828,20 +830,19 @@ const IMDB_TOP_250 = [
 app.get('/api/profile', requireAuth, async (req, res) => {
   try {
     const userResult = await db.query(
-      'SELECT id, username, email, bio, avatar, created_at FROM users WHERE id = $1',
+      'SELECT id, username, email, bio, avatar, active_badge, banner_color, favorite_movie_id, created_at FROM users WHERE id = $1',
       [req.session.userId]
     );
     const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const statsResult = await db.query(
-      'SELECT COUNT(*) as total, AVG(rating) as "avgRating" FROM movies WHERE user_id = $1',
-      [req.session.userId]
-    );
-    const wlResult = await db.query(
-      'SELECT COUNT(*) as "watchlistCount" FROM watchlist WHERE user_id = $1',
-      [req.session.userId]
-    );
+    const [statsResult, wlResult, favResult] = await Promise.all([
+      db.query('SELECT COUNT(*) as total, AVG(rating) as "avgRating" FROM movies WHERE user_id = $1', [req.session.userId]),
+      db.query('SELECT COUNT(*) as "watchlistCount" FROM watchlist WHERE user_id = $1', [req.session.userId]),
+      user.favorite_movie_id
+        ? db.query('SELECT id, title, "posterUrl", year, rating, genres FROM movies WHERE id = $1 AND user_id = $2', [user.favorite_movie_id, req.session.userId])
+        : Promise.resolve({ rows: [] })
+    ]);
 
     const stats = statsResult.rows[0];
     const wl = wlResult.rows[0];
@@ -851,6 +852,9 @@ app.get('/api/profile', requireAuth, async (req, res) => {
       email: user.email,
       bio: user.bio || '',
       avatar: user.avatar || '🎬',
+      activeBadge: user.active_badge || null,
+      bannerColor: user.banner_color || '#1c2228',
+      favoriteMovie: favResult.rows[0] || null,
       joinDate: user.created_at,
       totalMovies: parseInt(stats.total) || 0,
       avgRating: stats.avgRating ? parseFloat(stats.avgRating).toFixed(1) : 'N/A',
@@ -861,11 +865,14 @@ app.get('/api/profile', requireAuth, async (req, res) => {
   }
 });
 
-// Update bio and avatar
+// Update bio, avatar, banner, favorite movie
 app.put('/api/profile', requireAuth, async (req, res) => {
-  const { bio, avatar } = req.body;
+  const { bio, avatar, bannerColor, favoriteMovieId } = req.body;
   try {
-    await db.query('UPDATE users SET bio = $1, avatar = $2 WHERE id = $3', [bio, avatar, req.session.userId]);
+    await db.query(
+      'UPDATE users SET bio = $1, avatar = $2, banner_color = $3, favorite_movie_id = $4 WHERE id = $5',
+      [bio, avatar, bannerColor || '#1c2228', favoriteMovieId || null, req.session.userId]
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

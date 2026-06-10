@@ -1462,6 +1462,26 @@ async function equipBadge(badgeId, currentActive) {
   loadBadges();
 }
 
+const BANNER_COLORS = [
+  { color: '#1c2228', label: 'Dark' },
+  { color: '#0d1b2a', label: 'Navy' },
+  { color: '#1a1a2e', label: 'Midnight' },
+  { color: '#1b1b2f', label: 'Purple Dark' },
+  { color: '#2d1b0e', label: 'Warm Brown' },
+  { color: '#0a2a1a', label: 'Forest' },
+  { color: '#2a0a0a', label: 'Deep Red' },
+  { color: '#1a1200', label: 'Gold Dark' },
+  { color: '#16213e', label: 'Ocean' },
+  { color: '#0f3460', label: 'Blue' },
+  { color: '#533483', label: 'Purple' },
+  { color: '#c9410a', label: 'Orange' },
+  { color: '#0a7a4e', label: 'Green' },
+  { color: '#8b0000', label: 'Red' },
+  { color: '#b8860b', label: 'Gold' },
+];
+
+let currentBannerColor = '#1c2228';
+
 async function loadProfile() {
   try {
     const res = await fetch('/api/profile');
@@ -1478,24 +1498,103 @@ async function loadProfile() {
     const joined = new Date(data.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('profileJoinDate').textContent = `Member since ${joined}`;
 
+    // Banner
+    currentBannerColor = data.bannerColor || '#1c2228';
+    applyBanner(currentBannerColor);
+
+    // Active badge
+    const badgeEl = document.getElementById('profileActiveBadge');
+    if (data.activeBadge && badgeEl) {
+      badgeEl.textContent = data.activeBadge;
+      badgeEl.style.display = 'block';
+    }
+
+    // Favorite movie display
+    renderFavMovie(data.favoriteMovie);
+
+    // Populate favorite movie dropdown from allMovies
+    const sel = document.getElementById('favMovieSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">— None —</option>' +
+        (allMovies || []).map(m => `<option value="${m.id}" ${data.favoriteMovie?.id === m.id ? 'selected' : ''}>${m.title}${m.year ? ' ('+m.year+')' : ''}</option>`).join('');
+    }
+
     loadBadges();
   } catch (e) {
     console.error('Failed to load profile', e);
   }
 }
 
+function applyBanner(color) {
+  const banner = document.getElementById('profileBanner');
+  if (!banner) return;
+  // Gradient from chosen color to slightly lighter
+  banner.style.background = `linear-gradient(135deg, ${color} 0%, ${color}cc 60%, #E8B84B22 100%)`;
+  // Show/hide edit hint on hover
+  banner.onmouseenter = () => { const h = banner.querySelector('.banner-edit-hint'); if(h) h.style.opacity='1'; };
+  banner.onmouseleave = () => { const h = banner.querySelector('.banner-edit-hint'); if(h) h.style.opacity='0'; };
+}
+
+function renderFavMovie(movie) {
+  const el = document.getElementById('favMovieDisplay');
+  if (!el) return;
+  if (!movie) {
+    el.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;">No favorite movie pinned yet.</div>`;
+    return;
+  }
+  const stars = movie.rating ? '⭐'.repeat(Math.min(movie.rating, 5)) : '';
+  el.innerHTML = `<div style="display:flex;gap:12px;align-items:center;background:var(--surface2);border-radius:10px;padding:12px;">
+    <img src="${movie.posterUrl||''}" onerror="this.style.display='none'" style="width:44px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0;">
+    <div>
+      <div style="font-weight:700;color:var(--text);font-size:0.95em;">${movie.title}</div>
+      <div style="color:var(--text-muted);font-size:0.78em;margin-top:2px;">${movie.year||''} ${movie.genres ? '· '+movie.genres : ''}</div>
+      ${stars ? `<div style="margin-top:4px;font-size:0.85em;">${stars}</div>` : ''}
+    </div>
+    <div style="margin-left:auto;font-size:1.4em;" title="Pinned favorite">📌</div>
+  </div>`;
+}
+
+function openBannerPicker() {
+  const modal = document.getElementById('bannerPickerModal');
+  const grid = document.getElementById('bannerColorGrid');
+  if (!modal || !grid) return;
+  grid.innerHTML = BANNER_COLORS.map(b => `
+    <div onclick="selectBanner('${b.color}')" title="${b.label}"
+      style="width:100%;aspect-ratio:1;border-radius:8px;background:${b.color};cursor:pointer;border:2px solid ${b.color === currentBannerColor ? '#E8B84B' : 'transparent'};transition:border 0.15s;">
+    </div>`).join('');
+  modal.style.display = 'flex';
+}
+
+function closeBannerPicker() {
+  document.getElementById('bannerPickerModal').style.display = 'none';
+}
+
+function selectBanner(color) {
+  currentBannerColor = color;
+  applyBanner(color);
+  closeBannerPicker();
+}
+
 async function saveProfile() {
   const bio = document.getElementById('profileBio').value.trim();
   const avatar = document.getElementById('profileAvatar').textContent;
+  const favoriteMovieId = document.getElementById('favMovieSelect')?.value || null;
 
   const res = await fetch('/api/profile', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bio, avatar })
+    body: JSON.stringify({ bio, avatar, bannerColor: currentBannerColor, favoriteMovieId: favoriteMovieId || null })
   });
   const data = await res.json();
-  if (res.ok) showAlert('✅ Profile saved!');
-  else showAlert('❌ ' + data.error);
+  if (res.ok) {
+    // Update favorite movie display
+    const selEl = document.getElementById('favMovieSelect');
+    const selMovie = favoriteMovieId ? (allMovies||[]).find(m => m.id == favoriteMovieId) : null;
+    renderFavMovie(selMovie ? { id: selMovie.id, title: selMovie.title, posterUrl: selMovie.posterUrl, year: selMovie.year, rating: selMovie.rating, genres: selMovie.genres } : null);
+    showAlert('✅ Profile saved!');
+  } else {
+    showAlert('❌ ' + data.error);
+  }
 }
 
 async function changePassword() {

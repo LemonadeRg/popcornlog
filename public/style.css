@@ -1733,3 +1733,24 @@ body.light-mode .auth-input {
   0%, 100% { opacity: 0.5; }
   50%       { opacity: 1; }
 }
+
+/* ===== PROFILE BANNER ===== */
+#profileBanner {
+  transition: filter 0.2s;
+}
+#profileBanner:hover {
+  filter: brightness(1.1);
+}
+#profileBanner .banner-edit-hint {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#favMovieSelect {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+#favMovieSelect:focus {
+  outline: none;
+  border-color: var(--green);
+}
