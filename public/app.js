@@ -495,11 +495,9 @@ async function handleLogin() {
       return;
     }
 
-    currentUserId = data.userId;
-    currentIsAdmin = data.isAdmin || false;
-    if (currentIsAdmin) document.getElementById('adminBtn').style.display = 'flex';
-    showApp();
-    loadMovies();
+    // Reload the page so the server is fully warm before loading home data
+    sessionStorage.setItem('justLoggedIn', '1');
+    location.reload();
   } catch (error) {
     showAlert('❌ Login failed: ' + error.message);
   }
