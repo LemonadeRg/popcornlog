@@ -385,7 +385,7 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
     if (friendIds.length) {
       try {
         const feedRes = await db.query(
-          `SELECT fa.*, u.username, u.avatar, u.active_badge FROM friend_activity fa JOIN users u ON u.id = fa.from_user_id WHERE fa.from_user_id = ANY($1) ORDER BY fa.created_at DESC LIMIT 30`,
+          `SELECT fa.*, u.username, u.avatar, u.active_badge FROM friend_activity fa JOIN users u ON u.id = fa.from_user_id WHERE fa.from_user_id = ANY($1) ORDER BY fa.created_at DESC LIMIT 10`,
           [friendIds]
         );
         feed = feedRes.rows;
@@ -464,7 +464,7 @@ app.get('/api/home/feed', requireAuth, async (req, res) => {
       `SELECT fa.*, u.username, u.avatar, u.active_badge FROM friend_activity fa
        JOIN users u ON u.id = fa.from_user_id
        WHERE fa.from_user_id = ANY($1)
-       ORDER BY fa.created_at DESC LIMIT 30`,
+       ORDER BY fa.created_at DESC LIMIT 10`,
       [friendIds]
     );
     res.json(feed.rows);
@@ -789,7 +789,7 @@ app.get('/api/notifications', requireAuth, async (req, res) => {
     let newActivity = [];
     if (friendIds.length > 0) {
       const actRes = await db.query(
-        `SELECT * FROM friend_activity WHERE from_user_id = ANY($1) AND id > $2 ORDER BY created_at DESC LIMIT 20`,
+        `SELECT * FROM friend_activity WHERE from_user_id = ANY($1) AND id > $2 ORDER BY created_at DESC LIMIT 10`,
         [friendIds, lastSeenId]
       );
       newActivity = actRes.rows.map(r => ({ ...r, data: r.data }));
