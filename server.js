@@ -561,6 +561,50 @@ app.post('/api/badges/equip', requireAuth, async (req, res) => {
   }
 });
 
+// Retroactively award all badges based on existing data
+app.post('/api/badges/recalculate', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const newBadges = [];
+
+    // Movie count badges
+    const movieRes = await db.query('SELECT COUNT(*) as cnt FROM movies WHERE user_id=$1', [userId]);
+    const count = parseInt(movieRes.rows[0].cnt);
+    if (count >= 1)  { const b = await awardBadge(userId, 'first_movie');  if (b) newBadges.push(b); }
+    if (count >= 10) { const b = await awardBadge(userId, 'movie_buff');   if (b) newBadges.push(b); }
+    if (count >= 25) { const b = await awardBadge(userId, 'cinephile');    if (b) newBadges.push(b); }
+    if (count >= 50) { const b = await awardBadge(userId, 'film_fanatic'); if (b) newBadges.push(b); }
+
+    // 5-star rating
+    const criticRes = await db.query('SELECT id FROM movies WHERE user_id=$1 AND rating=5 LIMIT 1', [userId]);
+    if (criticRes.rows.length) { const b = await awardBadge(userId, 'the_critic'); if (b) newBadges.push(b); }
+
+    // Watchlist (planner)
+    const plannerRes = await db.query('SELECT id FROM watchlist WHERE user_id=$1 LIMIT 1', [userId]);
+    if (plannerRes.rows.length) { const b = await awardBadge(userId, 'planner'); if (b) newBadges.push(b); }
+
+    // Accepted friend request (social)
+    const socialRes = await db.query(
+      `SELECT id FROM friend_requests WHERE (from_user_id=$1 OR to_user_id=$1) AND status='accepted' LIMIT 1`, [userId]
+    );
+    if (socialRes.rows.length) { const b = await awardBadge(userId, 'social'); if (b) newBadges.push(b); }
+
+    // Sent a chat message (chatter)
+    const chatterRes = await db.query('SELECT id FROM chat_messages WHERE user_id=$1 LIMIT 1', [userId]);
+    if (chatterRes.rows.length) { const b = await awardBadge(userId, 'chatter'); if (b) newBadges.push(b); }
+
+    // 5+ genres (explorer)
+    const genreRes = await db.query('SELECT genres FROM movies WHERE user_id=$1', [userId]);
+    const genres = new Set();
+    genreRes.rows.forEach(r => { if (r.genres) r.genres.split(',').forEach(g => genres.add(g.trim().toLowerCase())); });
+    if (genres.size >= 5) { const b = await awardBadge(userId, 'explorer'); if (b) newBadges.push(b); }
+
+    res.json({ newBadges });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Award quiz badge
 app.post('/api/badges/quiz-correct', requireAuth, async (req, res) => {
   try {

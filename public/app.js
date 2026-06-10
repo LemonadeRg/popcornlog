@@ -53,6 +53,11 @@ window.addEventListener('load', async function() {
     showApp();
     await loadMovies();
     showSection('home');
+    // Backfill any badges earned before the badge system existed
+    fetch('/api/badges/recalculate', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => { if (d.newBadges?.length) handleNewBadges(d.newBadges); })
+      .catch(() => {});
   } else {
     showAuth();
   }
