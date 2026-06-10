@@ -67,6 +67,7 @@ window.addEventListener('load', async function() {
       if (da) da.style.display = 'flex';
     }
     showApp();
+    await waitForServer(20000); // wait up to 20s for Railway to wake up
     await loadMovies();
     showSection('home');
     // Backfill any badges earned before the badge system existed
@@ -565,6 +566,19 @@ function showSectionEl(id) {
 }
 
 // ===== HOME PAGE =====
+// Wait for server to be alive (handles Railway cold start)
+async function waitForServer(maxWaitMs = 20000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const r = await fetch('/api/ping');
+      if (r.ok) return true;
+    } catch (e) { /* still waking */ }
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  return false;
+}
+
 async function loadHome() {
   document.getElementById('moodResult').style.display = 'none';
   const statsEl = document.getElementById('homeStats');
@@ -575,6 +589,9 @@ async function loadHome() {
   if (podium)  podium.innerHTML  = '<div class="home-loading">Loading leaderboard…</div>';
   if (feedEl)  feedEl.innerHTML  = '<div class="home-loading">Loading feed…</div>';
   if (trendEl) trendEl.innerHTML = '<div class="home-loading">Loading trending…</div>';
+
+  // Make sure server is awake before firing all requests
+  await waitForServer();
 
   await Promise.allSettled([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
   homeRetryLoop(1);

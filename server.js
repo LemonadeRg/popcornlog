@@ -160,6 +160,16 @@ async function initDB() {
 
 initDB().catch(err => console.error('DB init error:', err));
 
+// ===== PING (wake-up endpoint) =====
+app.get('/api/ping', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(503).json({ ok: false });
+  }
+});
+
 // ===== BADGES =====
 const BADGES = {
   first_movie:    { id: 'first_movie',    name: 'First Log',     emoji: '🎬', desc: 'Add your first movie' },
