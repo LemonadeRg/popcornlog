@@ -1361,6 +1361,9 @@ h1 {
   border: 1px solid var(--border);
   border-radius: 10px;
   margin-bottom: 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .home-trending-item {
   display: flex;
