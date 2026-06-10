@@ -1717,7 +1717,7 @@ function avatarWithBadge(avatar, activeBadgeId, size = '1.6em') {
   if (!badgeEmoji) return `<span style="font-size:${size};">${avatar || '🎬'}</span>`;
   return `<span style="position:relative;display:inline-block;">
     <span style="font-size:${size};">${avatar || '🎬'}</span>
-    <span style="position:absolute;bottom:-3px;right:-6px;font-size:calc(${size} * 0.55);line-height:1;">${badgeEmoji}</span>
+    <span style="position:absolute;bottom:-2px;right:-5px;font-size:0.65em;line-height:1;">${badgeEmoji}</span>
   </span>`;
 }
 
