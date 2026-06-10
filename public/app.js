@@ -569,26 +569,31 @@ async function loadHomeStats() {
     const res = await fetch('/api/home/stats');
     const s = await res.json();
     const el = document.getElementById('homeStats');
+    const days = Math.round(s.hours / 24 * 10) / 10;
     el.innerHTML = `
-      <div class="home-stat-card">
-        <div style="font-size:1.8em;">🎬</div>
-        <div style="font-size:1.6em; font-weight:800; color:var(--text);">${s.total}</div>
-        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Films Logged</div>
+      <div class="home-stat-card stat-green">
+        <div class="stat-icon">🎬</div>
+        <div class="stat-value">${s.total}</div>
+        <div class="stat-label">Films Logged</div>
+        <div class="stat-sub">${s.topGenre ? `Top genre: ${s.topGenre}` : 'Keep watching!'}</div>
       </div>
-      <div class="home-stat-card">
-        <div style="font-size:1.8em;">⏱️</div>
-        <div style="font-size:1.6em; font-weight:800; color:var(--text);">${s.hours}</div>
-        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Hours Watched</div>
+      <div class="home-stat-card stat-blue">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-value">${s.hours}<span style="font-size:0.5em;font-weight:500;margin-left:3px;">hrs</span></div>
+        <div class="stat-label">Time Watched</div>
+        <div class="stat-sub">${days} days of cinema</div>
       </div>
-      <div class="home-stat-card">
-        <div style="font-size:1.8em;">⭐</div>
-        <div style="font-size:1.6em; font-weight:800; color:var(--text);">${s.avgRating || '—'}</div>
-        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Avg Rating</div>
+      <div class="home-stat-card stat-gold">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-value">${s.avgRating || '—'}</div>
+        <div class="stat-label">Avg Rating</div>
+        <div class="stat-sub">${s.avgRating >= 4 ? 'You love movies!' : s.avgRating ? 'Picky critic 🎭' : 'Rate some films'}</div>
       </div>
-      <div class="home-stat-card">
-        <div style="font-size:1.8em;">${s.streak > 2 ? '🔥' : '📅'}</div>
-        <div style="font-size:1.6em; font-weight:800; color:${s.streak > 2 ? 'var(--green)' : 'var(--text)'};">${s.streak}</div>
-        <div style="font-size:0.75em; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Day Streak</div>
+      <div class="home-stat-card stat-orange">
+        <div class="stat-icon">${s.streak > 2 ? '🔥' : '📅'}</div>
+        <div class="stat-value">${s.streak}</div>
+        <div class="stat-label">Day Streak</div>
+        <div class="stat-sub">${s.streak > 0 ? `${s.streak} day${s.streak > 1 ? 's' : ''} in a row` : 'Start your streak!'}</div>
       </div>
     `;
   } catch(e) {}
@@ -612,14 +617,21 @@ async function loadHomeFeed() {
         const safeTitle = (d.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         const poster = d.poster && d.poster !== 'N/A' ? d.poster : '';
         const stars = d.rating ? '⭐'.repeat(Math.min(d.rating, 5)) : '';
-        return `<div class="home-feed-item">
-          <img src="${poster}" onerror="this.style.display='none'" style="width:40px; height:58px; object-fit:cover; border-radius:5px; flex-shrink:0;">
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:0.88em; color:var(--text);"><strong>${item.avatar || '🎬'} ${item.username || ''}</strong> added <strong>${d.title || 'a movie'}</strong></div>
-            ${stars ? `<div style="color:var(--green); font-size:0.78em; margin-top:2px;">${stars}</div>` : ''}
-            <div style="color:var(--text-muted); font-size:0.75em; margin-top:3px;">${time}</div>
+        return `<div class="feed-card">
+          <div class="feed-poster-wrap">
+            <img src="${poster}" onerror="this.style.display='none'" class="feed-poster">
           </div>
-          <button onclick="addMovieFromFeed('${safeTitle}')" style="padding:5px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.75em; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;">+ Later</button>
+          <div class="feed-body">
+            <div class="feed-meta">
+              <span class="feed-avatar">${item.avatar || '🎬'}</span>
+              <span class="feed-username">${item.username || ''}</span>
+              <span class="feed-action">added a movie</span>
+            </div>
+            <div class="feed-title">${d.title || 'a movie'}</div>
+            ${stars ? `<div class="feed-stars">${stars}</div>` : ''}
+            <div class="feed-time">${time}</div>
+          </div>
+          <button onclick="addMovieFromFeed('${safeTitle}')" class="feed-add-btn">+ Later</button>
         </div>`;
       }
       return '';
@@ -644,15 +656,17 @@ async function loadHomeTrending() {
   try {
     const res = await fetch('/api/home/trending');
     const movies = await res.json();
-    el.innerHTML = `<div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px 16px;">` +
-      movies.map(m => `
-        <div class="home-trending-item">
-          <img src="${m.poster || ''}" onerror="this.style.display='none'" style="width:32px; height:46px; object-fit:cover; border-radius:4px; flex-shrink:0;">
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:0.85em; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.title}</div>
-            <div style="font-size:0.75em; color:var(--text-muted);">${m.year || ''} · ⭐ ${m.rating}</div>
+    el.innerHTML = `<div class="trending-list">` +
+      movies.map((m, i) => `
+        <div class="trending-card">
+          <div class="trending-rank">${i + 1}</div>
+          <img src="${m.poster || ''}" onerror="this.style.display='none'" class="trending-poster">
+          <div class="trending-info">
+            <div class="trending-title">${m.title}</div>
+            <div class="trending-meta">${m.year || ''}</div>
           </div>
-          <button onclick="addMovieFromFeed('${(m.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')" style="padding:4px 9px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:0.72em; cursor:pointer; font-family:inherit; flex-shrink:0;">+ Later</button>
+          <div class="trending-rating">⭐ ${m.rating}</div>
+          <button onclick="addMovieFromFeed('${(m.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')" class="trending-add-btn">+ Later</button>
         </div>
       `).join('') + `</div>`;
   } catch(e) {}
@@ -829,17 +843,18 @@ async function loadLeaderboard() {
     const medals = ['🥇','🥈','🥉'];
     const podium = document.getElementById('leaderboardPodium');
     if (!podium) return;
-    const rankStyles = [
-      'border-color:rgba(255,215,0,0.4); background:rgba(255,215,0,0.05);',
-      'border-color:rgba(192,192,192,0.3); background:rgba(192,192,192,0.04);',
-      'border-color:rgba(205,127,50,0.3); background:rgba(205,127,50,0.04);'
-    ];
+    const rankColors = ['#FFD700','#C0C0C0','#CD7F32'];
+    const rankBg = ['rgba(255,215,0,0.07)','rgba(192,192,192,0.05)','rgba(205,127,50,0.05)'];
+    const maxCount = top[0]?.movie_count || 1;
     podium.innerHTML = top.map((u, i) => `
-      <div style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 12px; border-radius:12px; border:1px solid var(--border); ${rankStyles[i]} text-align:center;">
-        <span style="font-size:2em; line-height:1;">${medals[i]}</span>
-        <span style="font-size:2em; line-height:1;">${u.avatar || '🎬'}</span>
-        <span style="font-size:0.88em; font-weight:700; color:var(--text);">${u.username}</span>
-        <span style="font-size:0.78em; color:var(--text-muted); background:var(--surface2); padding:2px 10px; border-radius:10px;">${u.movie_count} film${u.movie_count == 1 ? '' : 's'}</span>
+      <div class="leaderboard-card" style="border-color:${rankColors[i]}40; background:${rankBg[i]};">
+        <div class="lb-rank" style="color:${rankColors[i]};">${medals[i]}</div>
+        <div class="lb-avatar">${u.avatar || '🎬'}</div>
+        <div class="lb-username">${u.username}</div>
+        <div class="lb-count">${u.movie_count} film${u.movie_count == 1 ? '' : 's'}</div>
+        <div class="lb-bar-track">
+          <div class="lb-bar-fill" style="width:${Math.round(u.movie_count/maxCount*100)}%; background:${rankColors[i]};"></div>
+        </div>
       </div>
     `).join('');
   } catch(e) {}
