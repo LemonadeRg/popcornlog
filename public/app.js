@@ -565,19 +565,36 @@ function showSectionEl(id) {
 }
 
 // ===== HOME PAGE =====
-async function loadHome(retry = true) {
+async function loadHome() {
   document.getElementById('moodResult').style.display = 'none';
-  await Promise.all([loadHomeStats(), loadLeaderboard(), loadHomeFeed(), loadHomeTrending()]);
-  // If leaderboard or trending still empty after first load (cold server), retry once
-  if (retry) {
-    setTimeout(async () => {
-      const podium = document.getElementById('leaderboardPodium');
-      const trending = document.getElementById('homeTrending');
-      if (!podium?.children.length || !trending?.children.length) {
-        await loadHome(false);
-      }
-    }, 1500);
-  }
+  loadHomeStats();
+  loadLeaderboard();
+  loadHomeFeed();
+  loadHomeTrending();
+  // Retry any sections that failed due to Railway cold start
+  scheduleHomeRetry(1);
+}
+
+function scheduleHomeRetry(attempt) {
+  if (attempt > 4) return;
+  const delay = attempt * 2000; // 2s, 4s, 6s, 8s
+  setTimeout(async () => {
+    const podium   = document.getElementById('leaderboardPodium');
+    const trending = document.getElementById('homeTrending');
+    const stats    = document.getElementById('homeStats');
+    const needsRetry =
+      !podium?.children.length ||
+      !trending?.children.length ||
+      !stats?.children.length;
+    if (needsRetry) {
+      if (!podium?.children.length)   loadLeaderboard();
+      if (!trending?.children.length) loadHomeTrending();
+      if (!stats?.children.length)    loadHomeStats();
+      if (document.getElementById('homeFeed')?.innerHTML?.includes('Loading'))
+        loadHomeFeed();
+      scheduleHomeRetry(attempt + 1);
+    }
+  }, delay);
 }
 
 async function loadHomeStats() {

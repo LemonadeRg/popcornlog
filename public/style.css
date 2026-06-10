@@ -133,14 +133,10 @@ h1 {
 .sidebar-corner-name {
   font-size: 1.05em;
   font-weight: 800;
-  color: var(--text);
-  letter-spacing: 0.5px;
+  color: #E8B84B;
+  letter-spacing: 1px;
   line-height: 1;
   font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #F5D06A 0%, #E8B84B 50%, #C9920A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .sidebar-corner-tagline {
