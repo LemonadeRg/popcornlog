@@ -136,6 +136,33 @@ async function initDB() {
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_color TEXT DEFAULT '#1c2228'`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_movie_id INTEGER REFERENCES movies(id) ON DELETE SET NULL`);
 
+  // Games hub
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS game_stats (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      xp INTEGER DEFAULT 0,
+      level INTEGER DEFAULT 1,
+      total_games INTEGER DEFAULT 0,
+      quiz_wins INTEGER DEFAULT 0,
+      battle_votes INTEGER DEFAULT 0,
+      poster_guesses INTEGER DEFAULT 0,
+      current_streak INTEGER DEFAULT 0,
+      best_streak INTEGER DEFAULT 0,
+      last_played DATE
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS battle_votes (
+      id SERIAL PRIMARY KEY,
+      movie_a TEXT NOT NULL,
+      movie_b TEXT NOT NULL,
+      voted_for TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Friend activity feed (for movie notifications)
   await db.query(`
     CREATE TABLE IF NOT EXISTS friend_activity (
@@ -938,6 +965,108 @@ app.delete('/api/profile', requireAuth, async (req, res) => {
 });
 
 // ===== QUIZ =====
+// ===== GAMES HUB =====
+
+// Get or init game profile
+app.get('/api/games/profile', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    await db.query(`INSERT INTO game_stats (user_id) VALUES ($1) ON CONFLICT DO NOTHING`, [userId]);
+    const r = await db.query(`SELECT * FROM game_stats WHERE user_id=$1`, [userId]);
+    res.json(r.rows[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Award XP after a game
+app.post('/api/games/xp', requireAuth, async (req, res) => {
+  const { xp, gameType, won } = req.body;
+  const userId = req.session.userId;
+  try {
+    await db.query(`INSERT INTO game_stats (user_id) VALUES ($1) ON CONFLICT DO NOTHING`, [userId]);
+    const r = await db.query(`SELECT * FROM game_stats WHERE user_id=$1`, [userId]);
+    const gs = r.rows[0];
+    const today = new Date().toISOString().slice(0,10);
+    const lastPlayed = gs.last_played ? gs.last_played.toISOString().slice(0,10) : null;
+    const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    let newStreak = gs.current_streak;
+    if (lastPlayed === today) { /* same day, no change */ }
+    else if (lastPlayed === yesterday) newStreak++;
+    else newStreak = 1;
+    const newBestStreak = Math.max(gs.best_streak, newStreak);
+    const newXP = gs.xp + (xp || 0);
+    const newLevel = Math.floor(newXP / 500) + 1;
+    const colMap = { quiz: 'quiz_wins', battle: 'battle_votes', poster: 'poster_guesses' };
+    const col = colMap[gameType] || 'total_games';
+    await db.query(`
+      UPDATE game_stats SET xp=$1, level=$2, total_games=total_games+1,
+      ${col}=${col}+1, current_streak=$3, best_streak=$4, last_played=$5
+      WHERE user_id=$6`,
+      [newXP, newLevel, newStreak, newBestStreak, today, userId]
+    );
+    res.json({ xp: newXP, level: newLevel, streak: newStreak });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Movie Battles — get two random TMDB popular movies
+app.get('/api/games/battle', async (req, res) => {
+  try {
+    const page = Math.floor(Math.random() * 5) + 1;
+    const r = await fetch(`${TMDB_BASE}/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`);
+    const data = await r.json();
+    const pool = (data.results || []).filter(m => m.poster_path);
+    if (pool.length < 2) return res.status(500).json({ error: 'Not enough movies' });
+    const shuffled = pool.sort(() => Math.random() - 0.5);
+    const [a, b] = shuffled.slice(0, 2);
+    const fmt = m => ({
+      id: m.id, title: m.title,
+      poster: `https://image.tmdb.org/t/p/w500${m.poster_path}`,
+      year: m.release_date?.slice(0,4),
+      rating: m.vote_average?.toFixed(1)
+    });
+    // Get vote counts
+    const votesA = await db.query(`SELECT COUNT(*) as cnt FROM battle_votes WHERE movie_a=$1 AND movie_b=$2 AND voted_for=$1`, [a.title, b.title]);
+    const votesB = await db.query(`SELECT COUNT(*) as cnt FROM battle_votes WHERE movie_a=$1 AND movie_b=$2 AND voted_for=$2`, [a.title, b.title]);
+    res.json({ movieA: fmt(a), movieB: fmt(b), votesA: parseInt(votesA.rows[0].cnt), votesB: parseInt(votesB.rows[0].cnt) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Movie Battles — submit a vote
+app.post('/api/games/battle/vote', requireAuth, async (req, res) => {
+  const { movieA, movieB, votedFor } = req.body;
+  try {
+    await db.query(`INSERT INTO battle_votes (movie_a, movie_b, voted_for, user_id) VALUES ($1,$2,$3,$4)`,
+      [movieA, movieB, votedFor, req.session.userId]);
+    const vA = await db.query(`SELECT COUNT(*) as cnt FROM battle_votes WHERE movie_a=$1 AND movie_b=$2 AND voted_for=$1`, [movieA, movieB]);
+    const vB = await db.query(`SELECT COUNT(*) as cnt FROM battle_votes WHERE movie_a=$1 AND movie_b=$2 AND voted_for=$2`, [movieA, movieB]);
+    res.json({ votesA: parseInt(vA.rows[0].cnt), votesB: parseInt(vB.rows[0].cnt) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Guess The Poster — get a random TMDB movie with cast info
+app.get('/api/games/poster', async (req, res) => {
+  try {
+    const page = Math.floor(Math.random() * 10) + 1;
+    const r = await fetch(`${TMDB_BASE}/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`);
+    const data = await r.json();
+    const pool = (data.results || []).filter(m => m.poster_path && m.overview);
+    const movie = pool[Math.floor(Math.random() * pool.length)];
+    // Get cast
+    const credits = await fetch(`${TMDB_BASE}/movie/${movie.id}/credits?api_key=${TMDB_API_KEY}`);
+    const cdata = await credits.json();
+    const lead = cdata.cast?.[0]?.name || 'Unknown';
+    const genres = movie.genre_ids?.slice(0,2) || [];
+    const genreNames = { 28:'Action',35:'Comedy',18:'Drama',27:'Horror',878:'Sci-Fi',53:'Thriller',10749:'Romance',80:'Crime',14:'Fantasy',12:'Adventure' };
+    res.json({
+      poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+      answer: movie.title,
+      year: movie.release_date?.slice(0,4),
+      genre: genres.map(g => genreNames[g] || '').filter(Boolean).join(', ') || 'Drama',
+      lead,
+      rating: movie.vote_average?.toFixed(1)
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/quiz', requireAuth, async (req, res) => {
   let exclude = [];
   try {

@@ -112,7 +112,7 @@
       <button onclick="showSection('watchlist')" id="watchlistBtn" class="sidebar-btn" title="Watch Later">📋<span class="sidebar-tooltip">Watch Later</span></button>
       <button onclick="showSection('toprated')" id="topratedBtn" class="sidebar-btn" title="Top Rated">⭐<span class="sidebar-tooltip">Top Rated</span></button>
       <button onclick="showSection('recommended')" id="recommendedBtn" class="sidebar-btn" title="Recommended">🎯<span class="sidebar-tooltip">Recommended</span></button>
-      <button onclick="showSection('quiz')" id="quizBtn" class="sidebar-btn" title="Quiz">🎲<span class="sidebar-tooltip">Quiz</span></button>
+      <button onclick="showSection('games')" id="gamesBtn" class="sidebar-btn" title="Games">🎮<span class="sidebar-tooltip">Games</span></button>
 
       <div class="sidebar-divider"></div>
 
@@ -490,30 +490,111 @@
         </div>
       </div>
 
-      <div id="quizSection" style="display:none;">
-        <div style="max-width:650px; margin:0 auto; text-align:center;">
+      <!-- GAMES HUB -->
+      <div id="gamesSection" style="display:none;">
 
-          <div id="quizScore" style="display:flex; justify-content:center; gap:30px; margin-bottom:30px;">
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 28px;">
-              <div style="font-size:1.8em; font-weight:800; color:#00e054;" id="quizCorrect">0</div>
-              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Correct</div>
-            </div>
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 28px;">
-              <div style="font-size:1.8em; font-weight:800; color:#e84040;" id="quizWrong">0</div>
-              <div style="font-size:0.78em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Wrong</div>
-            </div>
+        <!-- Games Hub landing -->
+        <div id="gamesHub">
+          <!-- Header -->
+          <div style="text-align:center; margin-bottom:32px;">
+            <div style="font-size:2.8em; margin-bottom:8px;">🎮</div>
+            <h2 style="font-size:1.8em; font-weight:900; color:var(--text); margin-bottom:8px; letter-spacing:-0.5px;">Cinema Games</h2>
+            <p style="color:var(--text-dim); font-size:0.95em;">Play movie-themed games, earn XP, build streaks and challenge your movie knowledge.</p>
           </div>
 
-          <div id="quizCard" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; margin-bottom:20px; overflow:hidden;">
-            <p style="color:var(--text-dim); font-size:0.85em; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">What movie has this plot?</p>
-            <p id="quizPlot" style="color:var(--text); font-size:1.05em; line-height:1.8; margin-bottom:30px; font-style:italic; word-wrap:break-word; overflow-wrap:break-word;"></p>
-            <div id="quizOptions" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
-            <div id="quizFeedback" style="margin-top:24px; font-size:1.1em; font-weight:700; min-height:30px;"></div>
-          </div>
+          <!-- Gaming Stats -->
+          <div id="gameStatsRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:32px;"></div>
 
-          <button onclick="loadQuiz()" id="quizNextBtn" style="padding:12px 36px; background:#00e054; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.9em; font-family:inherit; text-transform:uppercase; letter-spacing:1px;">Next Question</button>
+          <!-- Game Cards -->
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+
+            <!-- Daily Quiz -->
+            <div class="game-card" onclick="openGame('quiz')">
+              <div class="game-card-icon">🧠</div>
+              <div class="game-card-badge">Daily Challenge</div>
+              <h3 class="game-card-title">Daily Quiz</h3>
+              <p class="game-card-desc">Guess the movie from its plot description. Keep your streak alive!</p>
+              <div class="game-card-meta">
+                <span id="gcQuizStreak">🔥 Loading...</span>
+              </div>
+              <button class="game-card-btn">Play Quiz</button>
+            </div>
+
+            <!-- Movie Battles -->
+            <div class="game-card" onclick="openGame('battle')">
+              <div class="game-card-icon">⚔️</div>
+              <div class="game-card-badge">Community Vote</div>
+              <h3 class="game-card-title">Movie Battles</h3>
+              <p class="game-card-desc">Two movies go head to head. Vote for your favorite and see what the community thinks!</p>
+              <div class="game-card-meta">
+                <span id="gcBattleVotes">🗳️ Loading...</span>
+              </div>
+              <button class="game-card-btn">Start Battle</button>
+            </div>
+
+            <!-- Guess The Poster -->
+            <div class="game-card" onclick="openGame('poster')">
+              <div class="game-card-icon">🎬</div>
+              <div class="game-card-badge">Brain Teaser</div>
+              <h3 class="game-card-title">Guess The Poster</h3>
+              <p class="game-card-desc">Can you identify a movie from a blurred poster? Use hints to help — but score less!</p>
+              <div class="game-card-meta">
+                <span id="gcPosterGuesses">🖼️ Loading...</span>
+              </div>
+              <button class="game-card-btn">Play</button>
+            </div>
+          </div>
         </div>
+
+        <!-- QUIZ GAME (hidden by default) -->
+        <div id="gameQuiz" style="display:none;">
+          <div style="max-width:650px; margin:0 auto; text-align:center;">
+            <button onclick="closeGame()" class="game-back-btn">← Back to Games</button>
+            <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:24px;">🧠 Daily Quiz</h3>
+            <div id="quizScore" style="display:flex; justify-content:center; gap:20px; margin-bottom:24px;">
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 28px;">
+                <div style="font-size:1.8em; font-weight:800; color:#00e054;" id="quizCorrect">0</div>
+                <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Correct</div>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 28px;">
+                <div style="font-size:1.8em; font-weight:800; color:#e84040;" id="quizWrong">0</div>
+                <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Wrong</div>
+              </div>
+            </div>
+            <div id="quizCard" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:32px; margin-bottom:20px;">
+              <p style="color:var(--text-muted); font-size:0.8em; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px;">What movie has this plot?</p>
+              <p id="quizPlot" style="color:var(--text); font-size:1.05em; line-height:1.8; margin-bottom:28px; font-style:italic;"></p>
+              <div id="quizOptions" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
+              <div id="quizFeedback" style="margin-top:20px; font-size:1.05em; font-weight:700; min-height:28px;"></div>
+            </div>
+            <button onclick="loadQuiz()" id="quizNextBtn" style="display:none; padding:12px 36px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.9em; font-family:inherit; text-transform:uppercase; letter-spacing:1px;">Next Question</button>
+          </div>
+        </div>
+
+        <!-- MOVIE BATTLES GAME -->
+        <div id="gameBattle" style="display:none;">
+          <div style="max-width:700px; margin:0 auto; text-align:center;">
+            <button onclick="closeGame()" class="game-back-btn">← Back to Games</button>
+            <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:8px;">⚔️ Movie Battles</h3>
+            <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:28px;">Which movie is better? Vote and see what everyone thinks.</p>
+            <div id="battleArena"></div>
+          </div>
+        </div>
+
+        <!-- GUESS THE POSTER GAME -->
+        <div id="gamePoster" style="display:none;">
+          <div style="max-width:560px; margin:0 auto; text-align:center;">
+            <button onclick="closeGame()" class="game-back-btn">← Back to Games</button>
+            <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:8px;">🎬 Guess The Poster</h3>
+            <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:24px;">Identify the movie from a blurred poster. Use hints to help — but you'll score less!</p>
+            <div id="posterArena"></div>
+          </div>
+        </div>
+
       </div>
+
+      <!-- keep old quizSection hidden, redirected to games -->
+      <div id="quizSection" style="display:none;"></div>
 
       <div id="recommendedSection" style="display: none;">
         <div class="filter-section">
@@ -712,7 +793,7 @@
     <button onclick="mobileNav('watchlist')" class="drawer-btn">📋 Watch Later</button>
     <button onclick="mobileNav('toprated')" class="drawer-btn">⭐ Top Rated</button>
     <button onclick="mobileNav('recommended')" class="drawer-btn">🎯 Recommended</button>
-    <button onclick="mobileNav('quiz')" class="drawer-btn">🎲 Quiz</button>
+    <button onclick="mobileNav('games')" class="drawer-btn">🎮 Games</button>
     <div style="height:1px; background:var(--border); margin:8px 16px;"></div>
     <button onclick="mobileNav('friends')" class="drawer-btn">👥 Friends</button>
     <button onclick="mobileNav('chat')" class="drawer-btn">💬 Chat</button>

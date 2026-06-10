@@ -814,7 +814,8 @@ const sectionNames = {
   watchlist: '📋 Watch Later',
   toprated: '⭐ Top Rated',
   recommended: '🎯 Recommended',
-  quiz: '🎲 Quiz',
+  games: '🎮 Games',
+  quiz: '🎮 Games',
   friends: '👥 Friends',
   chat: '💬 Chat',
   profile: '👤 Profile',
@@ -856,15 +857,16 @@ async function showSection(section) {
     showSectionEl('profileSection');
     document.getElementById('profileBtn').classList.add('active');
     loadProfile();
-  } else if (section === 'quiz') {
-    showSectionEl('quizSection');
-    document.getElementById('quizBtn').classList.add('active');
-    quizUsedTitles = [];
-    quizCorrect = 0;
-    quizWrong = 0;
-    document.getElementById('quizCorrect').textContent = '0';
-    document.getElementById('quizWrong').textContent = '0';
-    loadQuiz();
+  } else if (section === 'games' || section === 'quiz') {
+    showSectionEl('gamesSection');
+    document.getElementById('gamesBtn').classList.add('active');
+    // Show hub by default; quiz shortcut goes straight in
+    document.getElementById('gamesHub').style.display = 'block';
+    document.getElementById('gameQuiz').style.display = 'none';
+    document.getElementById('gameBattle').style.display = 'none';
+    document.getElementById('gamePoster').style.display = 'none';
+    loadGamesHub();
+    if (section === 'quiz') openGame('quiz');
   } else if (section === 'recommended') {
     showSectionEl('recommendedSection');
     document.getElementById('recommendedBtn').classList.add('active');
@@ -1704,6 +1706,268 @@ function selectAvatar(emoji) {
 }
 
 // ===== QUIZ =====
+// ===== GAMES HUB =====
+
+async function loadGamesHub() {
+  // Load game profile stats
+  try {
+    const res = await fetch('/api/games/profile');
+    const gs = await res.json();
+    const xpToNext = 500 - (gs.xp % 500);
+    const xpPct = Math.round(((gs.xp % 500) / 500) * 100);
+    document.getElementById('gameStatsRow').innerHTML = `
+      <div class="home-stat-card stat-gold">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value">${gs.level}</div>
+        <div class="stat-label">Level</div>
+        <div class="stat-sub">${gs.xp % 500} / 500 XP</div>
+        <div style="margin-top:8px;height:4px;background:var(--border);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${xpPct}%;background:#E8B84B;border-radius:4px;transition:width 0.6s;"></div>
+        </div>
+      </div>
+      <div class="home-stat-card stat-green">
+        <div class="stat-icon">🎮</div>
+        <div class="stat-value">${gs.total_games}</div>
+        <div class="stat-label">Games Played</div>
+        <div class="stat-sub">Keep playing!</div>
+      </div>
+      <div class="home-stat-card stat-orange">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-value">${gs.current_streak}</div>
+        <div class="stat-label">Day Streak</div>
+        <div class="stat-sub">Best: ${gs.best_streak} days</div>
+      </div>
+      <div class="home-stat-card stat-blue">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-value">${gs.quiz_wins + gs.poster_guesses}</div>
+        <div class="stat-label">Total Wins</div>
+        <div class="stat-sub">🗳️ ${gs.battle_votes} votes cast</div>
+      </div>`;
+    // Update game card meta
+    const qs = document.getElementById('gcQuizStreak');
+    const bv = document.getElementById('gcBattleVotes');
+    const pg = document.getElementById('gcPosterGuesses');
+    if (qs) qs.textContent = `🔥 Streak: ${gs.current_streak} day${gs.current_streak !== 1 ? 's' : ''}`;
+    if (bv) bv.textContent = `🗳️ ${gs.battle_votes} battle${gs.battle_votes !== 1 ? 's' : ''} voted`;
+    if (pg) pg.textContent = `🎯 ${gs.poster_guesses} poster${gs.poster_guesses !== 1 ? 's' : ''} guessed`;
+  } catch(e) {}
+}
+
+function openGame(type) {
+  document.getElementById('gamesHub').style.display = 'none';
+  document.getElementById('gameQuiz').style.display = 'none';
+  document.getElementById('gameBattle').style.display = 'none';
+  document.getElementById('gamePoster').style.display = 'none';
+  if (type === 'quiz') {
+    document.getElementById('gameQuiz').style.display = 'block';
+    quizCorrect = 0; quizWrong = 0;
+    document.getElementById('quizCorrect').textContent = '0';
+    document.getElementById('quizWrong').textContent = '0';
+    loadQuiz();
+  } else if (type === 'battle') {
+    document.getElementById('gameBattle').style.display = 'block';
+    loadBattle();
+  } else if (type === 'poster') {
+    document.getElementById('gamePoster').style.display = 'block';
+    loadPosterGame();
+  }
+}
+
+function closeGame() {
+  document.getElementById('gamesHub').style.display = 'block';
+  document.getElementById('gameQuiz').style.display = 'none';
+  document.getElementById('gameBattle').style.display = 'none';
+  document.getElementById('gamePoster').style.display = 'none';
+  loadGamesHub();
+}
+
+async function awardGameXP(xp, gameType) {
+  try {
+    await fetch('/api/games/xp', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ xp, gameType, won: true })
+    });
+  } catch(e) {}
+}
+
+// ===== MOVIE BATTLES =====
+let battleData = null;
+
+async function loadBattle() {
+  const arena = document.getElementById('battleArena');
+  arena.innerHTML = `<div class="home-loading">Loading matchup…</div>`;
+  try {
+    const res = await fetch('/api/games/battle');
+    battleData = await res.json();
+    renderBattle(battleData, false);
+  } catch(e) {
+    arena.innerHTML = `<div style="color:var(--text-muted);padding:20px;">Failed to load battle.</div>`;
+  }
+}
+
+function renderBattle(data, voted, votedFor) {
+  const arena = document.getElementById('battleArena');
+  const { movieA, movieB } = data;
+  if (!voted) {
+    arena.innerHTML = `
+      <div class="battle-vs-row">
+        <div class="battle-card" onclick="castVote('${movieA.title.replace(/'/g,"\\'")}', '${movieB.title.replace(/'/g,"\\'")}', 'A')">
+          <img src="${movieA.poster}" class="battle-poster" onerror="this.style.display='none'">
+          <div class="battle-title">${movieA.title}</div>
+          <div class="battle-meta">${movieA.year} · ⭐ ${movieA.rating}</div>
+          <button class="battle-vote-btn">Vote</button>
+        </div>
+        <div class="battle-vs">VS</div>
+        <div class="battle-card" onclick="castVote('${movieA.title.replace(/'/g,"\\'")}', '${movieB.title.replace(/'/g,"\\'")}', 'B')">
+          <img src="${movieB.poster}" class="battle-poster" onerror="this.style.display='none'">
+          <div class="battle-title">${movieB.title}</div>
+          <div class="battle-meta">${movieB.year} · ⭐ ${movieB.rating}</div>
+          <button class="battle-vote-btn">Vote</button>
+        </div>
+      </div>`;
+  } else {
+    const vA = data.votesA, vB = data.votesB, total = vA + vB || 1;
+    const pctA = Math.round(vA/total*100), pctB = Math.round(vB/total*100);
+    const winnerColor = vA > vB ? '#E8B84B' : vB > vA ? '#E8B84B' : 'var(--green)';
+    arena.innerHTML = `
+      <div class="battle-results">
+        <div class="battle-result-row ${votedFor==='A'?'voted':''}">
+          <img src="${movieA.poster}" class="battle-result-poster" onerror="this.style.display='none'">
+          <div style="flex:1;">
+            <div style="font-weight:700;color:var(--text);margin-bottom:6px;">${movieA.title} ${votedFor==='A'?'<span style="color:#E8B84B;">✓ Your vote</span>':''}</div>
+            <div class="battle-bar-track"><div class="battle-bar-fill" style="width:${pctA}%;background:${vA>=vB?winnerColor:'var(--border)'}"></div></div>
+          </div>
+          <div class="battle-pct" style="color:${vA>=vB?winnerColor:'var(--text-dim)'}">${pctA}%</div>
+        </div>
+        <div class="battle-result-row ${votedFor==='B'?'voted':''}">
+          <img src="${movieB.poster}" class="battle-result-poster" onerror="this.style.display='none'">
+          <div style="flex:1;">
+            <div style="font-weight:700;color:var(--text);margin-bottom:6px;">${movieB.title} ${votedFor==='B'?'<span style="color:#E8B84B;">✓ Your vote</span>':''}</div>
+            <div class="battle-bar-track"><div class="battle-bar-fill" style="width:${pctB}%;background:${vB>=vA?winnerColor:'var(--border)'}"></div></div>
+          </div>
+          <div class="battle-pct" style="color:${vB>=vA?winnerColor:'var(--text-dim)'}">${pctB}%</div>
+        </div>
+        <div style="margin-top:8px;color:var(--text-muted);font-size:0.8em;">${total} vote${total!==1?'s':''} total</div>
+        <button onclick="loadBattle()" style="margin-top:20px;padding:11px 32px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9em;">Next Battle ⚔️</button>
+      </div>`;
+  }
+}
+
+async function castVote(movieA, movieB, side) {
+  try {
+    const res = await fetch('/api/games/battle/vote', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ movieA, movieB, votedFor: side==='A'?movieA:movieB })
+    });
+    const data = await res.json();
+    battleData.votesA = data.votesA;
+    battleData.votesB = data.votesB;
+    renderBattle(battleData, true, side);
+    awardGameXP(25, 'battle');
+  } catch(e) {}
+}
+
+// ===== GUESS THE POSTER =====
+let posterData = null;
+let posterHintsUsed = 0;
+let posterBlurLevel = 20;
+let posterAnswered = false;
+
+async function loadPosterGame() {
+  const arena = document.getElementById('posterArena');
+  arena.innerHTML = `<div class="home-loading">Loading poster…</div>`;
+  posterHintsUsed = 0;
+  posterBlurLevel = 20;
+  posterAnswered = false;
+  try {
+    const res = await fetch('/api/games/poster');
+    posterData = await res.json();
+    renderPosterGame();
+  } catch(e) {
+    arena.innerHTML = `<div style="color:var(--text-muted);padding:20px;">Failed to load poster.</div>`;
+  }
+}
+
+function renderPosterGame() {
+  const pts = [100, 75, 50, 25][posterHintsUsed] || 25;
+  const hints = [
+    { label: '📅 Year', value: posterData.year },
+    { label: '🎭 Genre', value: posterData.genre },
+    { label: '🎬 Lead Actor', value: posterData.lead }
+  ];
+  const revealedHints = hints.slice(0, posterHintsUsed).map(h =>
+    `<div class="poster-hint-revealed">${h.label}: <strong>${h.value}</strong></div>`).join('');
+  const nextHint = hints[posterHintsUsed];
+
+  document.getElementById('posterArena').innerHTML = `
+    <div style="position:relative;display:inline-block;margin-bottom:20px;">
+      <img src="${posterData.poster}" id="posterImg"
+        style="width:220px;height:330px;object-fit:cover;border-radius:12px;filter:blur(${posterBlurLevel}px);transition:filter 0.5s;"
+        onerror="this.style.display='none'">
+      <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.8);color:#E8B84B;font-weight:800;padding:5px 12px;border-radius:20px;font-size:0.85em;">${pts} pts</div>
+    </div>
+    <div style="margin-bottom:16px;">${revealedHints}</div>
+    ${!posterAnswered ? `
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;">
+        ${nextHint && posterHintsUsed < 3 ? `<button onclick="useHint()" class="poster-hint-btn">💡 Hint: ${nextHint.label} (-${pts - ([100,75,50,25][posterHintsUsed+1]||0)} pts)</button>` : ''}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <input id="posterGuessInput" type="text" placeholder="Type the movie title…"
+          style="padding:11px 16px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95em;width:260px;"
+          onkeydown="if(event.key==='Enter')submitPosterGuess()">
+        <button onclick="submitPosterGuess()" style="padding:11px 20px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">Guess</button>
+      </div>
+      <div id="posterFeedback" style="margin-top:14px;min-height:24px;font-weight:700;font-size:1em;"></div>
+    ` : `
+      <button onclick="loadPosterGame()" style="padding:11px 28px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;">Next Poster 🎬</button>
+    `}`;
+}
+
+function useHint() {
+  if (posterHintsUsed >= 3) return;
+  posterHintsUsed++;
+  posterBlurLevel = [20, 14, 8, 3][posterHintsUsed] || 3;
+  renderPosterGame();
+  // Animate blur reduction
+  setTimeout(() => {
+    const img = document.getElementById('posterImg');
+    if (img) img.style.filter = `blur(${posterBlurLevel}px)`;
+  }, 50);
+}
+
+function submitPosterGuess() {
+  const input = document.getElementById('posterGuessInput');
+  if (!input) return;
+  const guess = input.value.trim().toLowerCase();
+  const answer = posterData.answer.toLowerCase();
+  const correct = guess === answer || answer.includes(guess) || guess.includes(answer.split(':')[0].trim());
+  const pts = [100, 75, 50, 25][posterHintsUsed] || 25;
+  const fb = document.getElementById('posterFeedback');
+  if (correct) {
+    posterAnswered = true;
+    // Unblur the poster
+    const img = document.getElementById('posterImg');
+    if (img) img.style.filter = 'blur(0px)';
+    fb.innerHTML = `✅ Correct! <span style="color:#E8B84B">+${pts} XP</span>`;
+    fb.style.color = 'var(--green)';
+    awardGameXP(pts, 'poster');
+    setTimeout(() => {
+      const arena = document.getElementById('posterArena');
+      if (arena) {
+        const btn = document.createElement('div');
+        btn.style.marginTop = '12px';
+        btn.innerHTML = `<button onclick="loadPosterGame()" style="padding:11px 28px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">Next Poster 🎬</button>`;
+        arena.appendChild(btn);
+      }
+    }, 800);
+  } else {
+    fb.textContent = `❌ Not quite — try again!`;
+    fb.style.color = 'var(--red)';
+    input.value = '';
+    input.focus();
+  }
+}
+
 let quizCorrect = 0;
 let quizWrong = 0;
 let quizAnswer = null;
@@ -1774,8 +2038,9 @@ function answerQuiz(chosen) {
   const feedback = document.getElementById('quizFeedback');
   if (chosen === quizAnswer) {
     quizCorrect++;
-    feedback.textContent = '✅ Correct!';
+    feedback.innerHTML = `✅ Correct! <span style="color:#E8B84B;font-size:0.85em;">+50 XP</span>`;
     feedback.style.color = '#00e054';
+    awardGameXP(50, 'quiz');
     fetch('/api/badges/quiz-correct', { method: 'POST' })
       .then(r => r.json()).then(d => handleNewBadges(d.newBadges)).catch(() => {});
   } else {
