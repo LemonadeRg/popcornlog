@@ -1525,4 +1525,16 @@ app.delete('/api/admin/chat/:id', requireAuth, requireAdmin, async (req, res) =>
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🎬 PopcornLog running on http://localhost:${PORT}`);
+  // Keep-alive ping every 14 minutes so Railway never hibernates
+  const SELF_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/ping`
+    : `http://localhost:${PORT}/api/ping`;
+  setInterval(async () => {
+    try {
+      await fetch(SELF_URL);
+      console.log('🏓 Keep-alive ping sent');
+    } catch(e) {
+      console.warn('Keep-alive ping failed:', e.message);
+    }
+  }, 14 * 60 * 1000); // every 14 minutes
 });
