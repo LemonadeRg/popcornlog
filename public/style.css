@@ -1062,7 +1062,7 @@ h1 {
   z-index: 0;
 }
 
-[data-theme="light"] .auth-bg-overlay {
+body.light-mode .auth-bg-overlay {
   filter: blur(18px) brightness(0.65) saturate(0.8);
 }
 
@@ -1111,10 +1111,32 @@ h1 {
   animation: authCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-[data-theme="light"] .auth-box {
-  background: rgba(255,255,255,0.85);
+body.light-mode .auth-box {
+  background: rgba(255,255,255,0.92);
   border-color: rgba(0,0,0,0.1);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.8) inset;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.9) inset;
+}
+body.light-mode .auth-brand-name {
+  color: #111;
+}
+body.light-mode .auth-tagline-main {
+  color: #222;
+}
+body.light-mode .auth-tagline-sub {
+  color: #555;
+}
+body.light-mode .auth-footer {
+  color: #555;
+}
+body.light-mode .auth-ctrl-select,
+body.light-mode .auth-ctrl-btn {
+  background: rgba(0,0,0,0.07);
+  color: #111;
+  border-color: rgba(0,0,0,0.2);
+}
+body.light-mode .auth-ctrl-select:hover,
+body.light-mode .auth-ctrl-btn:hover {
+  background: rgba(0,0,0,0.12);
 }
 
 @keyframes authCardIn {
@@ -1138,7 +1160,7 @@ h1 {
   animation: logoFloat 4s ease-in-out infinite;
 }
 
-[data-theme="light"] .auth-logo-img {
+body.light-mode .auth-logo-img {
   background: #f0f0f0;
 }
 
@@ -1191,7 +1213,7 @@ h1 {
   box-sizing: border-box;
 }
 
-[data-theme="light"] .auth-input {
+body.light-mode .auth-input {
   background: rgba(0,0,0,0.05);
   border-color: rgba(0,0,0,0.15);
 }
