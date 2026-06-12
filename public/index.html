@@ -105,7 +105,6 @@
       <button onclick="showSection('home')" id="homeBtn" class="sidebar-btn active" title="Home">🏠<span class="sidebar-tooltip">Home</span></button>
       <button onclick="showSection('movies')" id="moviesBtn" class="sidebar-btn" title="My Movies">🎬<span class="sidebar-tooltip">My Movies</span></button>
       <button onclick="showSection('watchlist')" id="watchlistBtn" class="sidebar-btn" title="Watch Later">📋<span class="sidebar-tooltip">Watch Later</span></button>
-      <button onclick="showSection('toprated')" id="topratedBtn" class="sidebar-btn" title="Top Rated">⭐<span class="sidebar-tooltip">Top Rated</span></button>
       <button onclick="showSection('recommended')" id="recommendedBtn" class="sidebar-btn" title="Recommended">🎯<span class="sidebar-tooltip">Recommended</span></button>
       <button onclick="showSection('games')" id="gamesBtn" class="sidebar-btn" title="Games">🎮<span class="sidebar-tooltip">Games</span></button>
 
@@ -188,15 +187,25 @@
           <button onclick="addMovie()" data-i18n="addMovie">+ Add Movie</button>
         </div>
 
-        <div class="filter-section">
-          <button onclick="filterMovies('all')" class="filter-btn active" data-i18n="allMovies">All Movies</button>
-          <button onclick="filterMovies('Action')" class="filter-btn">Action</button>
-          <button onclick="filterMovies('Sci-Fi')" class="filter-btn">Sci-Fi</button>
-          <button onclick="filterMovies('Drama')" class="filter-btn">Drama</button>
-          <button onclick="filterMovies('Comedy')" class="filter-btn">Comedy</button>
-          <button onclick="filterMovies('Horror')" class="filter-btn">Horror</button>
-          <button onclick="filterMovies('Thriller')" class="filter-btn">Thriller</button>
-          <button onclick="filterMovies('Romance')" class="filter-btn">Romance</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
+          <div class="filter-section" style="margin-bottom:0; flex:1;">
+            <button onclick="filterMovies('all')" class="filter-btn active" data-i18n="allMovies">All</button>
+            <button onclick="filterMovies('Action')" class="filter-btn">Action</button>
+            <button onclick="filterMovies('Sci-Fi')" class="filter-btn">Sci-Fi</button>
+            <button onclick="filterMovies('Drama')" class="filter-btn">Drama</button>
+            <button onclick="filterMovies('Comedy')" class="filter-btn">Comedy</button>
+            <button onclick="filterMovies('Horror')" class="filter-btn">Horror</button>
+            <button onclick="filterMovies('Thriller')" class="filter-btn">Thriller</button>
+            <button onclick="filterMovies('Romance')" class="filter-btn">Romance</button>
+            <button onclick="filterMovies('5star')" class="filter-btn">⭐ Top Rated</button>
+          </div>
+          <select id="movieSortSelect" onchange="applyDefaultSort(this.value)"
+            style="padding:7px 12px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.82em; cursor:pointer; flex-shrink:0;">
+            <option value="date">📅 Date Added</option>
+            <option value="rating">⭐ My Rating</option>
+            <option value="title">🔤 A–Z</option>
+            <option value="year">📆 Year</option>
+          </select>
         </div>
 
         <div class="movies-grid" id="moviesContainer"></div>
@@ -356,24 +365,6 @@
                 <input type="checkbox" id="toggleLeaderboard" onchange="savePref('showLeaderboard', this.checked)" checked>
                 <span class="settings-toggle-track"></span>
               </label>
-            </div>
-          </div>
-
-          <!-- Movie Sort -->
-          <div class="settings-card">
-            <div class="settings-card-title">🗂️ My Movies</div>
-            <div class="settings-row" style="border-bottom:none;">
-              <div>
-                <div class="settings-row-label">Default Sort</div>
-                <div class="settings-row-sub">How your movie list is sorted by default</div>
-              </div>
-              <select id="defaultSortSelect" onchange="applyDefaultSort(this.value)"
-                style="background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:inherit; font-size:0.85em; cursor:pointer;">
-                <option value="date">📅 Date Added</option>
-                <option value="rating">⭐ My Rating</option>
-                <option value="title">🔤 Title (A–Z)</option>
-                <option value="year">📆 Release Year</option>
-              </select>
             </div>
           </div>
 
@@ -926,7 +917,6 @@
     <button onclick="mobileNav('home')" class="drawer-btn">🏠 Home</button>
     <button onclick="mobileNav('movies')" class="drawer-btn">🎬 My Movies</button>
     <button onclick="mobileNav('watchlist')" class="drawer-btn">📋 Watch Later</button>
-    <button onclick="mobileNav('toprated')" class="drawer-btn">⭐ Top Rated</button>
     <button onclick="mobileNav('recommended')" class="drawer-btn">🎯 Recommended</button>
     <button onclick="mobileNav('games')" class="drawer-btn">🎮 Games</button>
     <div style="height:1px; background:var(--border); margin:8px 16px;"></div>

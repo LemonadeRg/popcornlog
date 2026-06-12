@@ -826,7 +826,6 @@ async function showSection(section) {
   document.getElementById('homeSection').style.display = 'none';
   document.getElementById('moviesSection').style.display = 'none';
   document.getElementById('watchlistSection').style.display = 'none';
-  document.getElementById('topratedSection').style.display = 'none';
   document.getElementById('recommendedSection').style.display = 'none';
   document.getElementById('quizSection').style.display = 'none';
   document.getElementById('gamesSection').style.display = 'none';
@@ -873,10 +872,6 @@ async function showSection(section) {
     showSectionEl('recommendedSection');
     document.getElementById('recommendedBtn').classList.add('active');
     loadRecommendations();
-  } else if (section === 'toprated') {
-    showSectionEl('topratedSection');
-    document.getElementById('topratedBtn').classList.add('active');
-    displayMovies(allMovies.filter(m => m.rating === 5), 'topratedContainer');
   } else if (section === 'friends') {
     showSectionEl('friendsSection');
     document.getElementById('friendsBtn').classList.add('active');
@@ -947,7 +942,10 @@ async function loadMovies() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       allMovies = await response.json();
       const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
-      displayMovies(sortMoviesList(allMovies, prefs.defaultSort || 'date'));
+      const savedSort = prefs.defaultSort || 'date';
+      const sel = document.getElementById('movieSortSelect');
+      if (sel) sel.value = savedSort;
+      displayMovies(sortMoviesList(allMovies, savedSort));
       return; // success
     } catch (error) {
       console.warn(`loadMovies attempt ${i+1} failed:`, error.message);
@@ -1031,13 +1029,15 @@ function filterMovies(genre) {
   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
 
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  const sort = prefs.defaultSort || 'date';
   if (genre === 'all') {
-    displayMovies(allMovies);
+    displayMovies(sortMoviesList(allMovies, sort));
+  } else if (genre === '5star') {
+    displayMovies(sortMoviesList(allMovies.filter(m => m.rating === 5), sort));
   } else {
-    const filtered = allMovies.filter((movie) =>
-      movie.genres.toLowerCase().includes(genre.toLowerCase())
-    );
-    displayMovies(filtered);
+    const filtered = allMovies.filter(m => (m.genres || '').toLowerCase().includes(genre.toLowerCase()));
+    displayMovies(sortMoviesList(filtered, sort));
   }
 }
 
@@ -1705,8 +1705,7 @@ function loadSettings() {
   document.getElementById('toggleBadgeAlerts').checked    = prefs.badgeAlerts    !== false;
   document.getElementById('togglePublicProfile').checked  = prefs.publicProfile   !== false;
   document.getElementById('toggleLeaderboard').checked    = prefs.showLeaderboard !== false;
-  // Default sort
-  if (prefs.defaultSort) document.getElementById('defaultSortSelect').value = prefs.defaultSort;
+  // (sort is on the movies page now)
   // Genre chips
   const selected = prefs.genres || [];
   document.getElementById('genreChips').innerHTML = GENRES.map(g => `
@@ -1716,7 +1715,8 @@ function loadSettings() {
 
 function applyDefaultSort(value) {
   savePref('defaultSort', value);
-  // Re-render movies with new sort immediately
+  const sel = document.getElementById('movieSortSelect');
+  if (sel) sel.value = value;
   const sorted = sortMoviesList(allMovies, value);
   displayMovies(sorted);
 }
