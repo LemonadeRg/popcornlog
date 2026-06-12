@@ -287,6 +287,77 @@
         </div>
       </div>
 
+      <!-- FRIEND PROFILE SECTION (full page) -->
+      <div id="friendProfileSection" style="display:none;">
+        <div style="max-width:640px; margin:0 auto;">
+          <!-- Back button -->
+          <button onclick="closeFriendProfilePage()" style="display:flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:0.85em;font-family:inherit;margin-bottom:16px;padding:0;">‹ Back</button>
+
+          <!-- Banner + Avatar card -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; margin-bottom:20px; overflow:hidden;">
+            <div id="fpBanner" style="height:130px; background:#1c2228; background-size:cover; background-position:center;"></div>
+            <div style="padding:0 24px 24px; position:relative;">
+              <div style="position:relative; display:inline-block; margin-top:-36px;">
+                <div id="fpAvatar" style="font-size:4em; width:72px; height:72px; background:var(--surface2); border:3px solid var(--surface); border-radius:50%; display:flex; align-items:center; justify-content:center;"></div>
+                <div id="fpActiveBadge" style="position:absolute; bottom:-2px; right:-2px; font-size:1.3em; display:none;"></div>
+              </div>
+              <div style="margin-top:12px;">
+                <h2 id="fpUsername" style="color:var(--text); font-size:1.5em; font-weight:800; margin:0 0 4px;"></h2>
+                <p id="fpJoinDate" style="color:var(--text-muted); font-size:0.75em; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px;"></p>
+                <p id="fpBio" style="color:var(--text-dim); font-size:0.88em; line-height:1.55; margin:0; display:none;"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+              <div id="fpMovies" style="font-size:2em; font-weight:800; color:var(--green);">-</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Movies</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+              <div id="fpAvgRating" style="font-size:2em; font-weight:800; color:var(--orange);">-</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Avg Rating</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+              <div id="fpWatchlist" style="font-size:2em; font-weight:800; color:#7c6af7;">-</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Watchlist</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+              <div id="fpTopRated" style="font-size:2em; font-weight:800; color:var(--orange);">-</div>
+              <div style="font-size:0.75em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">5 ⭐</div>
+            </div>
+          </div>
+
+          <!-- Favorite Movie -->
+          <div id="fpFavMovieBox" style="display:none; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📌 Favorite Movie</div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <img id="fpFavPoster" src="" style="width:48px;height:70px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">
+              <div>
+                <div id="fpFavTitle" style="font-weight:700; font-size:1em; color:var(--text); margin-bottom:4px;"></div>
+                <div id="fpFavMeta" style="font-size:0.8em; color:var(--text-dim);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Badges -->
+          <div id="fpBadgesBox" style="display:none; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:16px;">🏅 Badges</div>
+            <div id="fpBadgesRow" style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px;"></div>
+          </div>
+
+          <!-- Recently Watched -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🎬 Recently Watched</div>
+            <div id="fpRecentMovies" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+          </div>
+
+          <!-- View all movies -->
+          <button id="fpViewMoviesBtn" style="width:100%; padding:12px; background:var(--green); color:#000; border:none; border-radius:10px; cursor:pointer; font-weight:700; font-size:0.9em; font-family:inherit; text-transform:uppercase; letter-spacing:1px; margin-bottom:20px;">🎬 View All Movies</button>
+        </div>
+      </div>
+
       <!-- SETTINGS SECTION -->
       <div id="settingsSection" style="display:none;">
         <div style="max-width:580px; margin:0 auto;">
@@ -508,70 +579,6 @@
         </div>
       </div>
 
-      <!-- FRIEND PROFILE MODAL -->
-      <div class="modal" id="friendProfileModal">
-        <div class="modal-content" style="max-width:520px; padding:0; overflow:hidden;">
-          <button class="close-btn" onclick="closeFriendProfile()" style="position:absolute;top:12px;right:14px;z-index:10;">&times;</button>
-          <!-- Banner -->
-          <div id="fpBanner" style="height:120px; background:#1c2228; background-size:cover; background-position:center;"></div>
-          <!-- Avatar + info -->
-          <div style="padding:0 22px 20px; position:relative;">
-            <div style="display:flex; align-items:flex-end; gap:14px; margin-top:-32px; margin-bottom:10px;">
-              <div style="position:relative; flex-shrink:0;">
-                <div id="fpAvatar" style="font-size:3.2em; width:64px; height:64px; background:var(--surface2); border:3px solid var(--surface); border-radius:50%; display:flex; align-items:center; justify-content:center;"></div>
-                <div id="fpActiveBadge" style="position:absolute;bottom:-2px;right:-2px;font-size:1.1em;display:none;"></div>
-              </div>
-              <div style="flex:1; padding-bottom:4px;">
-                <h2 id="fpUsername" style="color:var(--text); font-size:1.3em; font-weight:800; margin:0 0 2px;"></h2>
-                <p id="fpJoinDate" style="color:var(--text-muted); font-size:0.72em; text-transform:uppercase; letter-spacing:1px; margin:0;"></p>
-              </div>
-            </div>
-            <!-- Bio -->
-            <p id="fpBio" style="color:var(--text-dim); font-size:0.88em; line-height:1.55; margin:0 0 16px; display:none;"></p>
-            <!-- Stats -->
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
-              <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                <div id="fpMovies" style="font-size:1.4em; font-weight:800; color:var(--green);"></div>
-                <div style="font-size:0.68em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">Movies</div>
-              </div>
-              <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                <div id="fpAvgRating" style="font-size:1.4em; font-weight:800; color:var(--orange);"></div>
-                <div style="font-size:0.68em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">Avg ⭐</div>
-              </div>
-              <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                <div id="fpWatchlist" style="font-size:1.4em; font-weight:800; color:#7c6af7;"></div>
-                <div style="font-size:0.68em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">Watchlist</div>
-              </div>
-              <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                <div id="fpTopRated" style="font-size:1.4em; font-weight:800; color:var(--orange);"></div>
-                <div style="font-size:0.68em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">5 ⭐</div>
-              </div>
-            </div>
-            <!-- Fav movie -->
-            <div id="fpFavMovieBox" style="display:none; background:var(--surface2); border-radius:8px; padding:12px; margin-bottom:16px;">
-              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:8px;">📌 Favorite Movie</div>
-              <div id="fpFavMovie" style="display:flex; align-items:center; gap:10px;">
-                <img id="fpFavPoster" src="" style="width:36px;height:52px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">
-                <div>
-                  <div id="fpFavTitle" style="font-weight:700; font-size:0.9em; color:var(--text);"></div>
-                  <div id="fpFavMeta" style="font-size:0.75em; color:var(--text-dim); margin-top:2px;"></div>
-                </div>
-              </div>
-            </div>
-            <!-- Badges -->
-            <div id="fpBadgesBox" style="display:none; margin-bottom:16px;">
-              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:8px;">🏅 Badges</div>
-              <div id="fpBadgesRow" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-            </div>
-            <!-- Recent movies -->
-            <div style="margin-bottom:16px;">
-              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:8px;">🎬 Recently Watched</div>
-              <div id="fpRecentMovies" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-            </div>
-            <button id="fpViewMoviesBtn" style="width:100%; padding:10px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.88em; font-family:inherit; text-transform:uppercase; letter-spacing:1px;">🎬 View All Movies</button>
-          </div>
-        </div>
-      </div>
 
       <!-- FRIEND MOVIES MODAL -->
       <div class="modal" id="friendMoviesModal">

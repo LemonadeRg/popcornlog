@@ -838,6 +838,7 @@ async function showSection(section) {
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('adminSection').style.display = 'none';
   document.getElementById('settingsSection').style.display = 'none';
+  document.getElementById('friendProfileSection').style.display = 'none';
 
   // Remove active from all sidebar buttons
   document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -3003,15 +3004,31 @@ async function deleteAdminMessage(msgId, btn) {
 }
 
 // ===== FRIEND PROFILE =====
-async function viewFriendProfile(friendId, username) {
-  document.getElementById('friendProfileModal').classList.add('active');
+let _prevSection = 'friends';
 
-  // Reset
+async function viewFriendProfile(friendId, username) {
+  // Remember where we came from so back button works
+  _prevSection = document.querySelector('.sidebar-btn.active')?.id?.replace('Btn','') || 'friends';
+
+  // Show the full-page section
+  document.getElementById('homeSection').style.display = 'none';
+  document.getElementById('moviesSection').style.display = 'none';
+  document.getElementById('watchlistSection').style.display = 'none';
+  document.getElementById('recommendedSection').style.display = 'none';
+  document.getElementById('gamesSection').style.display = 'none';
+  document.getElementById('profileSection').style.display = 'none';
+  document.getElementById('friendsSection').style.display = 'none';
+  document.getElementById('chatSection').style.display = 'none';
+  document.getElementById('adminSection').style.display = 'none';
+  document.getElementById('settingsSection').style.display = 'none';
+  document.getElementById('quizSection').style.display = 'none';
+  document.getElementById('friendProfileSection').style.display = 'block';
+
+  // Reset to loading state
   document.getElementById('fpAvatar').textContent = '⏳';
   document.getElementById('fpUsername').textContent = username;
   document.getElementById('fpJoinDate').textContent = '';
   document.getElementById('fpBio').style.display = 'none';
-  document.getElementById('fpBio').textContent = '';
   document.getElementById('fpFavMovieBox').style.display = 'none';
   document.getElementById('fpBadgesBox').style.display = 'none';
   document.getElementById('fpMovies').textContent = '...';
@@ -3023,7 +3040,7 @@ async function viewFriendProfile(friendId, username) {
   try {
     const res = await fetch(`/api/friends/${friendId}/profile`);
     const d = await res.json();
-    if (!res.ok) { showAlert('❌ ' + d.error); closeFriendProfile(); return; }
+    if (!res.ok) { showAlert('❌ ' + d.error); closeFriendProfilePage(); return; }
 
     // Avatar + badge
     document.getElementById('fpAvatar').textContent = d.avatar;
@@ -3040,6 +3057,17 @@ async function viewFriendProfile(friendId, username) {
     const fpBanner = document.getElementById('fpBanner');
     fpBanner.style.backgroundImage = '';
     fpBanner.style.background = d.bannerColor || '#1c2228';
+    // Try to load movie backdrop
+    if (d.favMovie) {
+      fetch(`/api/backdrop?title=${encodeURIComponent(d.favMovie.title)}&year=${d.favMovie.year||''}`)
+        .then(r => r.json()).then(bd => {
+          if (bd.backdrop) {
+            fpBanner.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 100%), url('${bd.backdrop}')`;
+            fpBanner.style.backgroundSize = 'cover';
+            fpBanner.style.backgroundPosition = 'center';
+          }
+        }).catch(() => {});
+    }
 
     // Bio
     const fpBio = document.getElementById('fpBio');
@@ -3069,7 +3097,10 @@ async function viewFriendProfile(friendId, username) {
       fpBadgesRow.innerHTML = d.badges.map(bid => {
         const emoji = BADGE_EMOJI[bid] || '🏅';
         const isActive = bid === d.activeBadge;
-        return `<span title="${bid}" style="font-size:1.5em; background:var(--surface); border:2px solid ${isActive ? 'var(--green)' : 'var(--border)'}; border-radius:8px; padding:4px 8px;">${emoji}</span>`;
+        return `<div style="text-align:center; background:var(--surface2); border:2px solid ${isActive ? 'var(--green)' : 'var(--border)'}; border-radius:10px; padding:10px 6px;">
+          <div style="font-size:1.6em;">${emoji}</div>
+          <div style="font-size:0.62em; color:var(--text-muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">${bid.replace(/_/g,' ')}</div>
+        </div>`;
       }).join('');
     } else { fpBadgesBox.style.display = 'none'; }
 
@@ -3081,30 +3112,28 @@ async function viewFriendProfile(friendId, username) {
       recentEl.innerHTML = d.recentMovies.map(m => `
         <div style="text-align:center;" title="${m.title}">
           <img src="${m.posterUrl}" alt="${m.title}"
-            style="width:50px; height:72px; object-fit:cover; border-radius:4px; border:2px solid var(--border);"
+            style="width:58px; height:84px; object-fit:cover; border-radius:6px; border:2px solid var(--border);"
             onerror="this.style.display='none'">
-          <div style="font-size:0.65em; color:var(--text-muted); margin-top:3px;">${'⭐'.repeat(m.rating||0)}</div>
+          <div style="font-size:0.65em; color:var(--text-muted); margin-top:4px;">${'⭐'.repeat(m.rating||0)}</div>
         </div>
       `).join('');
     }
 
-    // Wire up "View All Movies" button
     document.getElementById('fpViewMoviesBtn').onclick = () => {
-      closeFriendProfile();
+      closeFriendProfilePage();
       viewFriendMovies(friendId, d.username, d.avatar);
     };
 
   } catch(e) {
     showAlert('❌ Failed to load profile');
-    closeFriendProfile();
+    closeFriendProfilePage();
   }
 }
 
-function closeFriendProfile() {
-  document.getElementById('friendProfileModal').classList.remove('active');
+function closeFriendProfilePage() {
+  document.getElementById('friendProfileSection').style.display = 'none';
+  showSection(_prevSection || 'friends');
 }
 
-window.addEventListener('click', function(e) {
-  const fp = document.getElementById('friendProfileModal');
-  if (fp && e.target === fp) closeFriendProfile();
-});
+// Keep old name as alias so existing call sites still work
+function closeFriendProfile() { closeFriendProfilePage(); }
