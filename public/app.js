@@ -635,7 +635,7 @@ function renderHomeData(d) {
     const hour = new Date().getHours();
     const timeGreet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     greetingEl.textContent = `${timeGreet}, ${d.username || ''}! 👋`;
-    if (subEl) subEl.textContent = `${d.stats.total || 0} films logged · ${d.stats.hours || 0}hrs watched`;
+    if (subEl) subEl.textContent = `Here's what's happening`;
   }
 
   // Leaderboard — compact vertical list
