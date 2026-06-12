@@ -490,6 +490,32 @@ app.get('/api/home/trending', async (req, res) => { // public — used for auth 
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/trailers', requireAuth, async (req, res) => {
+  try {
+    const tr = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}&language=en-US`);
+    const data = await tr.json();
+    const movies = (data.results || []).slice(0, 8);
+    const withTrailers = await Promise.all(movies.map(async m => {
+      try {
+        const vr = await fetch(`${TMDB_BASE}/movie/${m.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+        const vd = await vr.json();
+        const trailer = vd.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+        if (!trailer) return null;
+        return {
+          title: m.title,
+          year: m.release_date?.slice(0,4),
+          poster: m.poster_path ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : null,
+          backdrop: m.backdrop_path ? `https://image.tmdb.org/t/p/w780${m.backdrop_path}` : null,
+          youtubeKey: trailer.key,
+          type: trailer.type,
+          rating: m.vote_average?.toFixed(1)
+        };
+      } catch { return null; }
+    }));
+    res.json(withTrailers.filter(Boolean).slice(0, 5));
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/leaderboard', requireAuth, async (req, res) => {
   try {
     const result = await db.query(`

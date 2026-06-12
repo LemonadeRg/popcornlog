@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background:#14181c; color:#c8d0d9; display:flex; height:100vh; overflow:hidden; }
+
+/* SLIM SIDEBAR */
+.sidebar {
+  width: 62px;
+  background: #1c2228;
+  border-right: 1px solid #2c3440;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+}
+
+.sidebar-logo {
+  width: 40px; height: 40px;
+  background: #242c35;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4em;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.nav-item {
+  position: relative;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  font-size: 1.3em;
+  cursor: pointer;
+  color: #7a8a99;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.nav-item:hover {
+  background: #242c35;
+  color: #c8d0d9;
+}
+
+.nav-item.active {
+  background: #242c35;
+  color: #00e054;
+  border-color: #00e054;
+}
+
+/* Tooltip */
+.nav-item .tooltip {
+  position: absolute;
+  left: 54px;
+  background: #242c35;
+  color: #c8d0d9;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  border: 1px solid #2c3440;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+.nav-item .tooltip::before {
+  content: '';
+  position: absolute;
+  left: -5px; top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: #2c3440;
+  border-left: none;
+}
+
+.nav-item:hover .tooltip {
+  opacity: 1;
+}
+
+.spacer { flex: 1; }
+
+.divider {
+  width: 36px;
+  height: 1px;
+  background: #2c3440;
+  margin: 6px 0;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar {
+  background: #1c2228;
+  border-bottom: 1px solid #2c3440;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar select, .topbar button {
+  padding: 6px 12px;
+  background: #242c35;
+  color: #7a8a99;
+  border: 1px solid #2c3440;
+  border-radius: 4px;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.content {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+}
+
+h2 { color: #c8d0d9; font-size: 1.3em; letter-spacing: 1px; }
+.subtitle { color: #7a8a99; font-size: 0.85em; margin-top: 4px; }
+
+.search-bar { display:flex; gap:10px; margin-top:20px; }
+.search-bar input {
+  flex:1; padding:10px 14px; background:#1c2228; color:#c8d0d9;
+  border:1px solid #2c3440; border-radius:4px; font-size:0.9em;
+}
+.search-bar button {
+  padding:10px 20px; background:#00e054; color:#000;
+  border:none; border-radius:4px; font-weight:800; cursor:pointer;
+}
+
+.movies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.movie-card {
+  background: #1c2228;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #2c3440;
+}
+
+.movie-poster {
+  width:100%; height:160px;
+  background:#242c35;
+  display:flex; align-items:center; justify-content:center;
+  font-size:2.5em;
+}
+
+.movie-info { padding:10px; }
+.movie-title { font-size:0.82em; font-weight:700; color:#c8d0d9; margin-bottom:4px; }
+.movie-stars { font-size:0.75em; color:#00e054; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">🍿</div>
+
+  <div class="nav-item active">🎬<span class="tooltip">My Movies</span></div>
+  <div class="nav-item">📋<span class="tooltip">Watch Later</span></div>
+  <div class="nav-item">⭐<span class="tooltip">Top Rated</span></div>
+  <div class="nav-item">🎯<span class="tooltip">Recommended</span></div>
+  <div class="nav-item">🎲<span class="tooltip">Quiz</span></div>
+
+  <div class="divider"></div>
+
+  <div class="nav-item">👥<span class="tooltip">Friends</span></div>
+  <div class="nav-item">💬<span class="tooltip">Chat</span></div>
+
+  <div class="spacer"></div>
+
+  <div class="divider"></div>
+  <div class="nav-item">👤<span class="tooltip">Profile</span></div>
+  <div class="nav-item" style="color:#e84040;">🚪<span class="tooltip">Sign Out</span></div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <select><option>🌐 EN</option><option>🌐 FR</option><option>🌐 AR</option></select>
+    <button>🌙</button>
+  </div>
+
+  <div class="content">
+    <h2>🎬 My Movies</h2>
+    <p class="subtitle">Your personal film log</p>
+    <div class="search-bar">
+      <input placeholder="Search for a movie...">
+      <button>+ Add Movie</button>
+    </div>
+    <div class="movies-grid">
+      <div class="movie-card"><div class="movie-poster">🎬</div><div class="movie-info"><div class="movie-title">Inception</div><div class="movie-stars">⭐⭐⭐⭐⭐</div></div></div>
+      <div class="movie-card"><div class="movie-poster">🎬</div><div class="movie-info"><div class="movie-title">The Dark Knight</div><div class="movie-stars">⭐⭐⭐⭐⭐</div></div></div>
+      <div class="movie-card"><div class="movie-poster">🎬</div><div class="movie-info"><div class="movie-title">Interstellar</div><div class="movie-stars">⭐⭐⭐⭐</div></div></div>
+      <div class="movie-card"><div class="movie-poster">🎬</div><div class="movie-info"><div class="movie-title">Pulp Fiction</div><div class="movie-stars">⭐⭐⭐⭐⭐</div></div></div>
+      <div class="movie-card"><div class="movie-poster">🎬</div><div class="movie-info"><div class="movie-title">Parasite</div><div class="movie-stars">⭐⭐⭐⭐</div></div></div>
+      <div class="movie-card"><div class="movie-poster">🎬</div><div class="movie-info"><div class="movie-title">The Godfather</div><div class="movie-stars">⭐⭐⭐⭐⭐</div></div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

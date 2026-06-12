@@ -605,7 +605,6 @@ function renderHomeData(d) {
   const statsEl = document.getElementById('homeStats');
   const podium  = document.getElementById('leaderboardPodium');
   const feedEl  = document.getElementById('homeFeed');
-  const trendEl = document.getElementById('homeTrending');
 
   // Stats
   if (statsEl) {
@@ -698,26 +697,8 @@ function renderHomeData(d) {
     }
   }
 
-  // Trending
-  if (trendEl) {
-    const movies = d.trending || [];
-    if (!movies.length) {
-      trendEl.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;padding:16px 0;text-align:center;">Trending unavailable</div>`;
-    } else {
-      trendEl.innerHTML = `<div class="trending-list">` +
-        movies.map((m, i) => `
-          <div class="trending-card">
-            <div class="trending-rank">${i+1}</div>
-            <img src="${m.poster||''}" onerror="this.style.display='none'" class="trending-poster">
-            <div class="trending-info">
-              <div class="trending-title">${m.title}</div>
-              <div class="trending-meta">${m.year||''}</div>
-            </div>
-            <div class="trending-rating">⭐ ${m.rating}</div>
-            <button onclick="addMovieFromFeed('${(m.title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}') " class="trending-add-btn">+ Later</button>
-          </div>`).join('') + `</div>`;
-    }
-  }
+  // Load trailers separately
+  loadTrailers();
 }
 
 async function loadHome() {
@@ -725,12 +706,10 @@ async function loadHome() {
   const statsEl = document.getElementById('homeStats');
   const podium  = document.getElementById('leaderboardPodium');
   const feedEl  = document.getElementById('homeFeed');
-  const trendEl = document.getElementById('homeTrending');
   const loadingHTML = `<div class="home-loading">Loading…</div>`;
   if (statsEl) statsEl.innerHTML = loadingHTML;
   if (podium)  podium.innerHTML  = loadingHTML;
   if (feedEl)  feedEl.innerHTML  = loadingHTML;
-  if (trendEl) trendEl.innerHTML = loadingHTML;
 
   // Ping first — ensures Railway server is awake before we fire the real request
   await waitForServer(25000);
@@ -762,7 +741,6 @@ async function loadHome() {
   </div>`;
   if (statsEl) statsEl.innerHTML = errHTML;
   if (podium)  podium.innerHTML  = errHTML;
-  if (trendEl) trendEl.innerHTML = errHTML;
   if (feedEl)  feedEl.innerHTML  = errHTML;
 }
 
@@ -781,6 +759,64 @@ async function loadLeaderboard() {}
 async function loadHomeStats() {}
 async function loadHomeFeed() {}
 async function loadHomeTrending() {}
+
+let _trailers = [];
+let _currentTrailerIdx = 0;
+
+function setFeaturedTrailer(idx) {
+  const t = _trailers[idx];
+  if (!t) return;
+  _currentTrailerIdx = idx;
+  const iframe = document.getElementById('trailerIframe');
+  const titleEl = document.getElementById('trailerFeaturedTitle');
+  const metaEl = document.getElementById('trailerFeaturedMeta');
+  if (iframe) iframe.src = `https://www.youtube.com/embed/${t.youtubeKey}?autoplay=1&rel=0`;
+  if (titleEl) titleEl.textContent = t.title;
+  if (metaEl) metaEl.textContent = `${t.year || ''} · ${t.type || 'Trailer'} · ⭐ ${t.rating || ''}`;
+  // Update up-next highlighting
+  document.querySelectorAll('.trailer-up-next-item').forEach((el, i) => {
+    el.style.background = i === idx ? 'var(--surface2)' : 'transparent';
+  });
+}
+
+async function loadTrailers() {
+  const section = document.getElementById('trailersSection');
+  if (!section) return;
+  try {
+    const res = await fetch('/api/trailers');
+    if (!res.ok) throw new Error('failed');
+    _trailers = await res.json();
+    if (!_trailers.length) throw new Error('empty');
+
+    // Render up-next list
+    const upNext = document.getElementById('trailerUpNext');
+    if (upNext) {
+      upNext.innerHTML = _trailers.map((t, i) => `
+        <div class="trailer-up-next-item" onclick="setFeaturedTrailer(${i})"
+          style="display:flex; gap:10px; align-items:flex-start; border-radius:10px; padding:8px; cursor:pointer; transition:background 0.15s; ${i===0?'background:var(--surface2);':''}">
+          <div style="position:relative; flex-shrink:0; width:110px; height:62px; border-radius:8px; overflow:hidden; background:#000;">
+            <img src="${t.backdrop || t.poster || ''}" onerror="this.style.display='none'"
+              style="width:100%; height:100%; object-fit:cover; display:block; opacity:0.85;">
+            <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+              <div style="width:28px; height:28px; background:rgba(0,0,0,0.65); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                <div style="width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:12px solid #fff; margin-left:2px;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.82em; font-weight:700; color:var(--text); line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${t.title}</div>
+            <div style="font-size:0.72em; color:var(--text-muted); margin-top:3px;">${t.year || ''} · ${t.type || 'Trailer'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Load first trailer
+    setFeaturedTrailer(0);
+  } catch(e) {
+    if (section) section.style.display = 'none';
+  }
+}
 
 const moodMap = {
   chill:    ['Drama', 'Romance'],
