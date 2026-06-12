@@ -499,7 +499,13 @@ app.get('/api/trailers', requireAuth, async (req, res) => {
       try {
         const vr = await fetch(`${TMDB_BASE}/movie/${m.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
         const vd = await vr.json();
-        const trailer = vd.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+        const videos = vd.results?.filter(v => v.site === 'YouTube') || [];
+        // Prefer official full trailers, then official teasers, then any trailer
+        const trailer =
+          videos.find(v => v.type === 'Trailer' && v.official && v.name && !/vertical|imax|clip|featurette/i.test(v.name)) ||
+          videos.find(v => v.type === 'Trailer' && v.official) ||
+          videos.find(v => v.type === 'Trailer') ||
+          videos.find(v => v.type === 'Teaser' && v.official);
         if (!trailer) return null;
         return {
           title: m.title,
