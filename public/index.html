@@ -138,31 +138,15 @@
         <!-- Stats row -->
         <div id="homeStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;"></div>
 
-        <!-- Main grid: leaderboard + trailers + right col -->
-        <div style="display:grid; grid-template-columns:220px 1fr 280px; gap:18px; align-items:start; min-width:0;">
+        <!-- Main grid: left col | trailer player | up next -->
+        <div style="display:grid; grid-template-columns:220px 1fr 260px; gap:18px; align-items:start; min-width:0;">
 
-          <!-- Left: Leaderboard -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
-            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🏆 Top Watchers</div>
-            <div id="leaderboardPodium" style="display:flex; flex-direction:column; gap:10px;"></div>
-          </div>
-
-          <!-- Middle: Trailers -->
-          <div id="trailersSection" style="min-width:0;">
-            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎞️ Trailers &amp; Teasers</div>
-            <div id="trailerPlayer" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden;">
-              <iframe id="trailerIframe" width="100%" height="100%" frameborder="0" allowfullscreen
-                allow="autoplay; encrypted-media" style="display:block;"></iframe>
-            </div>
-            <div style="margin-top:10px;">
-              <div id="trailerFeaturedTitle" style="font-size:1em; font-weight:800; color:var(--text);"></div>
-              <div id="trailerFeaturedMeta" style="font-size:0.78em; color:var(--text-muted); margin-top:2px;"></div>
-            </div>
-            <div id="trailerUpNext" style="display:flex; flex-direction:column; gap:8px; margin-top:12px;"></div>
-          </div>
-
-          <!-- Right: Mood picker -->
+          <!-- Left: Leaderboard + Mood picker -->
           <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
+              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🏆 Top Watchers</div>
+              <div id="leaderboardPodium" style="display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
             <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
               <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎬 What to watch tonight?</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px;">
@@ -173,6 +157,25 @@
               </div>
               <div id="moodResult" style="display:none;"></div>
             </div>
+          </div>
+
+          <!-- Middle: Trailer player -->
+          <div style="min-width:0;">
+            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎞️ Trailers &amp; Teasers</div>
+            <div id="trailerPlayer" style="width:100%; aspect-ratio:16/9; background:#111; border-radius:14px; overflow:hidden;">
+              <iframe id="trailerIframe" width="100%" height="100%" frameborder="0" allowfullscreen
+                allow="encrypted-media; picture-in-picture" style="display:block;"></iframe>
+            </div>
+            <div style="margin-top:10px;">
+              <div id="trailerFeaturedTitle" style="font-size:1em; font-weight:800; color:var(--text);"></div>
+              <div id="trailerFeaturedMeta" style="font-size:0.78em; color:var(--text-muted); margin-top:2px;"></div>
+            </div>
+          </div>
+
+          <!-- Right: Up next list -->
+          <div id="trailersSection" style="min-width:0;">
+            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">Up Next</div>
+            <div id="trailerUpNext" style="display:flex; flex-direction:column; gap:8px;"></div>
           </div>
 
         </div>

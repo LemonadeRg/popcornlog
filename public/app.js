@@ -770,12 +770,13 @@ function setFeaturedTrailer(idx) {
   const iframe = document.getElementById('trailerIframe');
   const titleEl = document.getElementById('trailerFeaturedTitle');
   const metaEl = document.getElementById('trailerFeaturedMeta');
-  if (iframe) iframe.src = `https://www.youtube.com/embed/${t.youtubeKey}?autoplay=1&rel=0`;
+  if (iframe) iframe.src = `https://www.youtube-nocookie.com/embed/${t.youtubeKey}?rel=0&modestbranding=1`;
   if (titleEl) titleEl.textContent = t.title;
   if (metaEl) metaEl.textContent = `${t.year || ''} · ${t.type || 'Trailer'} · ⭐ ${t.rating || ''}`;
   // Update up-next highlighting
   document.querySelectorAll('.trailer-up-next-item').forEach((el, i) => {
     el.style.background = i === idx ? 'var(--surface2)' : 'transparent';
+    el.style.border = i === idx ? '1px solid var(--border)' : '1px solid transparent';
   });
 }
 
@@ -793,7 +794,7 @@ async function loadTrailers() {
     if (upNext) {
       upNext.innerHTML = _trailers.map((t, i) => `
         <div class="trailer-up-next-item" onclick="setFeaturedTrailer(${i})"
-          style="display:flex; gap:10px; align-items:center; border-radius:10px; padding:7px 8px; cursor:pointer; transition:background 0.15s; ${i===0?'background:var(--surface);':''}">
+          style="display:flex; gap:10px; align-items:center; border-radius:10px; padding:7px 8px; cursor:pointer; transition:background 0.15s; ${i===0?'background:var(--surface2);border:1px solid var(--border);':'border:1px solid transparent;'}">
           <div style="position:relative; flex-shrink:0; width:100px; height:56px; border-radius:7px; overflow:hidden; background:#000;">
             <img src="${t.backdrop || t.poster || ''}" onerror="this.style.display='none'"
               style="width:100%; height:100%; object-fit:cover; display:block; opacity:0.85;">
