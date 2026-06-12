@@ -788,24 +788,24 @@ async function loadTrailers() {
     _trailers = await res.json();
     if (!_trailers.length) throw new Error('empty');
 
-    // Render up-next list
+    // Render up-next list (all trailers as horizontal strips below the player)
     const upNext = document.getElementById('trailerUpNext');
     if (upNext) {
       upNext.innerHTML = _trailers.map((t, i) => `
         <div class="trailer-up-next-item" onclick="setFeaturedTrailer(${i})"
-          style="display:flex; gap:10px; align-items:flex-start; border-radius:10px; padding:8px; cursor:pointer; transition:background 0.15s; ${i===0?'background:var(--surface2);':''}">
-          <div style="position:relative; flex-shrink:0; width:110px; height:62px; border-radius:8px; overflow:hidden; background:#000;">
+          style="display:flex; gap:10px; align-items:center; border-radius:10px; padding:7px 8px; cursor:pointer; transition:background 0.15s; ${i===0?'background:var(--surface);':''}">
+          <div style="position:relative; flex-shrink:0; width:100px; height:56px; border-radius:7px; overflow:hidden; background:#000;">
             <img src="${t.backdrop || t.poster || ''}" onerror="this.style.display='none'"
               style="width:100%; height:100%; object-fit:cover; display:block; opacity:0.85;">
             <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-              <div style="width:28px; height:28px; background:rgba(0,0,0,0.65); border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                <div style="width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:12px solid #fff; margin-left:2px;"></div>
+              <div style="width:24px; height:24px; background:rgba(0,0,0,0.65); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                <div style="width:0; height:0; border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:10px solid #fff; margin-left:2px;"></div>
               </div>
             </div>
           </div>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:0.82em; font-weight:700; color:var(--text); line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${t.title}</div>
-            <div style="font-size:0.72em; color:var(--text-muted); margin-top:3px;">${t.year || ''} · ${t.type || 'Trailer'}</div>
+            <div style="font-size:0.8em; font-weight:700; color:var(--text); line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.title}</div>
+            <div style="font-size:0.7em; color:var(--text-muted); margin-top:2px;">${t.year || ''} · ${t.type || 'Trailer'}</div>
           </div>
         </div>
       `).join('');

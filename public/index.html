@@ -138,7 +138,7 @@
         <!-- Stats row -->
         <div id="homeStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;"></div>
 
-        <!-- Main grid: leaderboard + feed + right col -->
+        <!-- Main grid: leaderboard + trailers + right col -->
         <div style="display:grid; grid-template-columns:220px 1fr 280px; gap:18px; align-items:start; min-width:0;">
 
           <!-- Left: Leaderboard -->
@@ -147,48 +147,38 @@
             <div id="leaderboardPodium" style="display:flex; flex-direction:column; gap:10px;"></div>
           </div>
 
-          <!-- Middle: Activity Feed -->
-          <div style="min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
-            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📰 Friend Activity</div>
-            <div id="homeFeed"></div>
+          <!-- Middle: Trailers -->
+          <div id="trailersSection" style="min-width:0;">
+            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎞️ Trailers &amp; Teasers</div>
+            <div id="trailerPlayer" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden;">
+              <iframe id="trailerIframe" width="100%" height="100%" frameborder="0" allowfullscreen
+                allow="autoplay; encrypted-media" style="display:block;"></iframe>
+            </div>
+            <div style="margin-top:10px;">
+              <div id="trailerFeaturedTitle" style="font-size:1em; font-weight:800; color:var(--text);"></div>
+              <div id="trailerFeaturedMeta" style="font-size:0.78em; color:var(--text-muted); margin-top:2px;"></div>
+            </div>
+            <div id="trailerUpNext" style="display:flex; flex-direction:column; gap:8px; margin-top:12px;"></div>
           </div>
 
           <!-- Right: Mood picker -->
-          <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; align-self:start;">
-            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎬 What to watch tonight?</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px;">
-              <button onclick="pickMood('chill')" class="mood-btn">😌 Chill</button>
-              <button onclick="pickMood('intense')" class="mood-btn">😤 Intense</button>
-              <button onclick="pickMood('laugh')" class="mood-btn">😂 Laugh</button>
-              <button onclick="pickMood('surprise')" class="mood-btn">🎲 Surprise</button>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
+              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎬 What to watch tonight?</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px;">
+                <button onclick="pickMood('chill')" class="mood-btn">😌 Chill</button>
+                <button onclick="pickMood('intense')" class="mood-btn">😤 Intense</button>
+                <button onclick="pickMood('laugh')" class="mood-btn">😂 Laugh</button>
+                <button onclick="pickMood('surprise')" class="mood-btn">🎲 Surprise</button>
+              </div>
+              <div id="moodResult" style="display:none;"></div>
             </div>
-            <div id="moodResult" style="display:none;"></div>
           </div>
 
         </div>
 
-        <!-- Trailers Section -->
-        <div style="margin-top:28px;">
-          <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🎞️ Trailers &amp; Teasers</div>
-          <div id="trailersSection" style="display:grid; grid-template-columns:1fr 340px; gap:16px; align-items:start;">
-            <!-- Featured player -->
-            <div>
-              <div id="trailerPlayer" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden;">
-                <iframe id="trailerIframe" width="100%" height="100%" frameborder="0" allowfullscreen
-                  allow="autoplay; encrypted-media" style="display:block;"></iframe>
-              </div>
-              <div id="trailerFeaturedInfo" style="margin-top:10px;">
-                <div id="trailerFeaturedTitle" style="font-size:1.1em; font-weight:800; color:var(--text);"></div>
-                <div id="trailerFeaturedMeta" style="font-size:0.8em; color:var(--text-muted); margin-top:2px;"></div>
-              </div>
-            </div>
-            <!-- Up next list -->
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px;">
-              <div style="font-size:0.7em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">Up Next</div>
-              <div id="trailerUpNext" style="display:flex; flex-direction:column; gap:10px;"></div>
-            </div>
-          </div>
-        </div>
+        <!-- Hidden feed div kept for JS compatibility -->
+        <div id="homeFeed" style="display:none;"></div>
 
       </div>
 
