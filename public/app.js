@@ -123,7 +123,7 @@ function mobileNav(section) {
   showSection(section);
   // Sync active state in drawer
   document.querySelectorAll('.drawer-btn').forEach(b => b.classList.remove('active'));
-  const map = { home:'Home', movies:'My Movies', watchlist:'Watch Later', toprated:'Top Rated', recommended:'Recommended', quiz:'Quiz', friends:'Friends', chat:'Chat', profile:'Profile', admin:'Admin' };
+  const map = { home:'Home', movies:'My Movies', watchlist:'Watch Later', toprated:'Top Rated', recommended:'Recommended', quiz:'Quiz', friends:'Friends', chat:'Chat', profile:'Profile', admin:'Admin', settings:'Settings' };
   document.querySelectorAll('.drawer-btn').forEach(b => {
     if (b.textContent.trim().includes(map[section] || '')) b.classList.add('active');
   });
@@ -834,6 +834,7 @@ async function showSection(section) {
   document.getElementById('friendsSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('adminSection').style.display = 'none';
+  document.getElementById('settingsSection').style.display = 'none';
 
   // Remove active from all sidebar buttons
   document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -885,6 +886,10 @@ async function showSection(section) {
     showSectionEl('chatSection');
     document.getElementById('chatBtn').classList.add('active');
     initChat();
+  } else if (section === 'settings') {
+    showSectionEl('settingsSection');
+    document.getElementById('settingsBtn').classList.add('active');
+    loadSettings();
   } else if (section === 'admin') {
     showSectionEl('adminSection');
     const adminBtn = document.getElementById('adminBtn');
@@ -1680,6 +1685,42 @@ async function changeUsername() {
   } else {
     msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + data.error;
   }
+}
+
+// ===== SETTINGS =====
+const GENRES = ['Action','Adventure','Animation','Comedy','Crime','Documentary','Drama','Fantasy','Horror','Mystery','Romance','Sci-Fi','Thriller'];
+
+function savePref(key, value) {
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  prefs[key] = value;
+  localStorage.setItem('popcornPrefs', JSON.stringify(prefs));
+}
+
+function loadSettings() {
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  // Toggles
+  document.getElementById('toggleSpoilers').checked    = !!prefs.hideSpoilers;
+  document.getElementById('toggleFriendActivity').checked = prefs.friendActivity !== false;
+  document.getElementById('toggleBadgeAlerts').checked    = prefs.badgeAlerts    !== false;
+  document.getElementById('togglePublicProfile').checked  = prefs.publicProfile   !== false;
+  document.getElementById('toggleLeaderboard').checked    = prefs.showLeaderboard !== false;
+  // Language
+  if (prefs.language) document.getElementById('langSelect').value = prefs.language;
+  // Genre chips
+  const selected = prefs.genres || [];
+  document.getElementById('genreChips').innerHTML = GENRES.map(g => `
+    <span class="genre-chip ${selected.includes(g) ? 'active' : ''}" onclick="toggleGenre(this,'${g}')">${g}</span>
+  `).join('');
+}
+
+function toggleGenre(el, genre) {
+  el.classList.toggle('active');
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  const genres = prefs.genres || [];
+  const idx = genres.indexOf(genre);
+  if (idx === -1) genres.push(genre); else genres.splice(idx, 1);
+  prefs.genres = genres;
+  localStorage.setItem('popcornPrefs', JSON.stringify(prefs));
 }
 
 async function changePassword() {

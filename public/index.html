@@ -124,6 +124,7 @@
 
       <button onclick="toggleNotifPanel()" id="notifBtn" class="sidebar-btn" title="Notifications">🔔<span class="sidebar-tooltip">Notifications</span><span id="notifBadge" class="sidebar-badge" style="display:none;"></span></button>
       <button onclick="showSection('profile')" id="profileBtn" class="sidebar-btn" title="Profile">👤<span class="sidebar-tooltip">Profile</span></button>
+      <button onclick="showSection('settings')" id="settingsBtn" class="sidebar-btn" title="Settings">⚙️<span class="sidebar-tooltip">Settings</span></button>
       <button id="adminBtn" onclick="showSection('admin')" class="sidebar-btn sidebar-btn-admin" title="Admin" style="display:none;">🛡️<span class="sidebar-tooltip">Admin</span></button>
       <button onclick="handleLogout()" class="sidebar-btn sidebar-btn-signout" title="Sign Out">🚪<span class="sidebar-tooltip">Sign Out</span></button>
     </nav>
@@ -308,6 +309,141 @@
             <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:16px;">Permanently delete your account and all your movies. This cannot be undone.</p>
             <button onclick="deleteAccount()" style="padding:9px 24px; background:transparent; color:#e84040; border:1px solid #e84040; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px;">Delete Account</button>
           </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS SECTION -->
+      <div id="settingsSection" style="display:none;">
+        <div style="max-width:580px; margin:0 auto;">
+          <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:3px; color:var(--text-muted); font-weight:700; margin-bottom:24px;">⚙️ Settings</div>
+
+          <!-- Profile quick-links -->
+          <div class="settings-card">
+            <div class="settings-card-title">👤 Profile</div>
+            <div class="settings-row" onclick="showSection('profile')" style="cursor:pointer;">
+              <div>
+                <div class="settings-row-label">Edit Profile</div>
+                <div class="settings-row-sub">Avatar, bio, banner, favorite movie</div>
+              </div>
+              <span class="settings-chevron">›</span>
+            </div>
+            <div class="settings-row" onclick="showSection('profile')" style="cursor:pointer;">
+              <div>
+                <div class="settings-row-label">Change Username</div>
+                <div class="settings-row-sub">Update your display name</div>
+              </div>
+              <span class="settings-chevron">›</span>
+            </div>
+            <div class="settings-row" onclick="showSection('profile'); setTimeout(()=>document.getElementById('currentPassword')?.scrollIntoView({behavior:'smooth'}),400)" style="cursor:pointer; border-bottom:none;">
+              <div>
+                <div class="settings-row-label">Change Password</div>
+                <div class="settings-row-sub">Update your account password</div>
+              </div>
+              <span class="settings-chevron">›</span>
+            </div>
+          </div>
+
+          <!-- Movie Preferences -->
+          <div class="settings-card">
+            <div class="settings-card-title">🎬 Movie Preferences</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Favorite Genres</div>
+                <div class="settings-row-sub">Pick genres you love</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; padding:0 0 16px; border-bottom:1px solid var(--border);" id="genreChips"></div>
+            <div class="settings-row" style="border-bottom:none;">
+              <div>
+                <div class="settings-row-label">Hide Spoilers</div>
+                <div class="settings-row-sub">Blur plot descriptions by default</div>
+              </div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="toggleSpoilers" onchange="savePref('hideSpoilers', this.checked)">
+                <span class="settings-toggle-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Notifications -->
+          <div class="settings-card">
+            <div class="settings-card-title">🔔 Notifications</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Friend Activity</div>
+                <div class="settings-row-sub">Show when friends add movies</div>
+              </div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="toggleFriendActivity" onchange="savePref('friendActivity', this.checked)" checked>
+                <span class="settings-toggle-track"></span>
+              </label>
+            </div>
+            <div class="settings-row" style="border-bottom:none;">
+              <div>
+                <div class="settings-row-label">Badge Alerts</div>
+                <div class="settings-row-sub">Notify when you earn a badge</div>
+              </div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="toggleBadgeAlerts" onchange="savePref('badgeAlerts', this.checked)" checked>
+                <span class="settings-toggle-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Privacy -->
+          <div class="settings-card">
+            <div class="settings-card-title">🔒 Privacy</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Show Profile to Friends</div>
+                <div class="settings-row-sub">Let friends view your profile card</div>
+              </div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="togglePublicProfile" onchange="savePref('publicProfile', this.checked)" checked>
+                <span class="settings-toggle-track"></span>
+              </label>
+            </div>
+            <div class="settings-row" style="border-bottom:none;">
+              <div>
+                <div class="settings-row-label">Show in Leaderboard</div>
+                <div class="settings-row-sub">Appear in Top Watchers ranking</div>
+              </div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="toggleLeaderboard" onchange="savePref('showLeaderboard', this.checked)" checked>
+                <span class="settings-toggle-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Language -->
+          <div class="settings-card">
+            <div class="settings-card-title">🌐 Language</div>
+            <div class="settings-row" style="border-bottom:none;">
+              <div>
+                <div class="settings-row-label">Display Language</div>
+                <div class="settings-row-sub">Interface language</div>
+              </div>
+              <select id="langSelect" onchange="savePref('language', this.value)"
+                style="background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:inherit; font-size:0.85em; cursor:pointer;">
+                <option value="en">🇬🇧 English</option>
+                <option value="fr">🇫🇷 Français</option>
+                <option value="ar">🇲🇦 العربية</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Sign out / danger -->
+          <div class="settings-card" style="border-color:rgba(232,64,64,0.2);">
+            <div class="settings-card-title" style="color:var(--red);">⚠️ Account</div>
+            <div class="settings-row" style="border-bottom:none; cursor:pointer;" onclick="handleLogout()">
+              <div>
+                <div class="settings-row-label" style="color:var(--red);">Sign Out</div>
+                <div class="settings-row-sub">Log out of your account</div>
+              </div>
+              <span class="settings-chevron" style="color:var(--red);">›</span>
+            </div>
+          </div>
+
         </div>
       </div>
 
