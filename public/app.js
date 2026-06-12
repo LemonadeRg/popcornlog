@@ -595,6 +595,12 @@ async function waitForServer(maxWaitMs = 25000) {
 }
 
 function renderHomeData(d) {
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  if (prefs.friendActivity === false) {
+    const feedEl = document.getElementById('homeFeed');
+    if (feedEl) { feedEl.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;padding:20px 0;text-align:center;">Friend activity is turned off in Settings.</div>`; }
+    d.feed = []; // prevent rendering below
+  }
   const s = d.stats || {};
   const statsEl = document.getElementById('homeStats');
   const podium  = document.getElementById('leaderboardPodium');
@@ -1427,6 +1433,8 @@ function showBadgeToast(badge) {
 
 function handleNewBadges(newBadges) {
   if (!newBadges || newBadges.length === 0) return;
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  if (prefs.badgeAlerts === false) return;
   let delay = 0;
   newBadges.forEach(badge => {
     setTimeout(() => showBadgeToast(badge), delay);
@@ -1733,14 +1741,41 @@ function savePref(key, value) {
   localStorage.setItem('popcornPrefs', JSON.stringify(prefs));
 }
 
-function loadSettings() {
+async function loadSettings() {
   const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
-  document.getElementById('toggleSpoilers').checked       = !!prefs.hideSpoilers;
   document.getElementById('toggleFriendActivity').checked = prefs.friendActivity !== false;
   document.getElementById('toggleBadgeAlerts').checked    = prefs.badgeAlerts    !== false;
-  document.getElementById('togglePublicProfile').checked  = prefs.publicProfile  !== false;
-  document.getElementById('toggleLeaderboard').checked    = prefs.showLeaderboard !== false;
   renderThemeGrid();
+  // Load server-side privacy settings
+  try {
+    const res = await fetch('/api/settings/privacy');
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('togglePublicProfile').checked = data.public_profile !== false;
+      document.getElementById('toggleLeaderboard').checked   = data.show_leaderboard !== false;
+    }
+  } catch(e) {}
+}
+
+async function savePrivacySettings() {
+  const publicProfile  = document.getElementById('togglePublicProfile').checked;
+  const showLeaderboard = document.getElementById('toggleLeaderboard').checked;
+  await fetch('/api/settings/privacy', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ publicProfile, showLeaderboard })
+  });
+}
+
+function applyFeedVisibility() {
+  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+  const feedSection = document.getElementById('homeFeed')?.closest('.home-col, div');
+  const feedEl = document.getElementById('homeFeed');
+  if (feedEl) {
+    feedEl.style.display = prefs.friendActivity !== false ? '' : 'none';
+    const feedHeader = feedEl.previousElementSibling;
+    if (feedHeader) feedHeader.style.display = prefs.friendActivity !== false ? '' : 'none';
+  }
 }
 
 function applyDefaultSort(value) {

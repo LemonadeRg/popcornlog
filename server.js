@@ -135,6 +135,8 @@ async function initDB() {
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_badge TEXT DEFAULT NULL`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_color TEXT DEFAULT '#1c2228'`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_movie_id INTEGER REFERENCES movies(id) ON DELETE SET NULL`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_profile BOOLEAN DEFAULT TRUE`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS show_leaderboard BOOLEAN DEFAULT TRUE`);
 
   // Games hub
   await db.query(`
@@ -356,7 +358,7 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
       db.query(`SELECT genres as genre, COUNT(*) as cnt FROM movies WHERE user_id=$1 AND genres IS NOT NULL AND genres != '' GROUP BY genres ORDER BY cnt DESC LIMIT 1`, [userId]),
       db.query(`SELECT created_at::date as day FROM movies WHERE user_id=$1 ORDER BY created_at DESC`, [userId]),
       db.query(`SELECT CASE WHEN from_user_id=$1 THEN to_user_id ELSE from_user_id END as friend_id FROM friend_requests WHERE (from_user_id=$1 OR to_user_id=$1) AND status='accepted'`, [userId]),
-      db.query(`SELECT u.id, u.username, u.avatar, u.active_badge, COUNT(m.id) AS movie_count FROM users u LEFT JOIN movies m ON m.user_id = u.id GROUP BY u.id, u.username, u.avatar, u.active_badge ORDER BY movie_count DESC LIMIT 3`)
+      db.query(`SELECT u.id, u.username, u.avatar, u.active_badge, COUNT(m.id) AS movie_count FROM users u LEFT JOIN movies m ON m.user_id = u.id WHERE u.show_leaderboard IS NOT FALSE GROUP BY u.id, u.username, u.avatar, u.active_badge ORDER BY movie_count DESC LIMIT 3`)
     ]);
     const val = (i, fallback) => results[i].status === 'fulfilled' ? results[i].value : { rows: fallback || [] };
     const moviesRes     = val(0, [{total:0, minutes:0}]);
@@ -493,6 +495,7 @@ app.get('/api/leaderboard', requireAuth, async (req, res) => {
       SELECT u.id, u.username, u.avatar, u.active_badge, COUNT(m.id) AS movie_count
       FROM users u
       LEFT JOIN movies m ON m.user_id = u.id
+      WHERE u.show_leaderboard IS NOT FALSE
       GROUP BY u.id, u.username, u.avatar, u.active_badge
       ORDER BY movie_count DESC
       LIMIT 3
@@ -931,6 +934,24 @@ app.put('/api/profile', requireAuth, async (req, res) => {
 
 // Change password
 // Change username
+// Get privacy settings
+app.get('/api/settings/privacy', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query('SELECT public_profile, show_leaderboard FROM users WHERE id=$1', [req.session.userId]);
+    res.json(r.rows[0]);
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// Save privacy settings
+app.put('/api/settings/privacy', requireAuth, async (req, res) => {
+  const { publicProfile, showLeaderboard } = req.body;
+  try {
+    await db.query('UPDATE users SET public_profile=$1, show_leaderboard=$2 WHERE id=$3',
+      [publicProfile !== false, showLeaderboard !== false, req.session.userId]);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 app.put('/api/profile/username', requireAuth, async (req, res) => {
   const { username } = req.body;
   if (!username || username.trim().length < 2) return res.status(400).json({ error: 'Username must be at least 2 characters' });
@@ -1438,10 +1459,11 @@ app.get('/api/friends/:userId/profile', requireAuth, async (req, res) => {
     if (check.rows.length === 0) return res.status(403).json({ error: 'Not friends' });
 
     const userRes = await db.query(
-      'SELECT id, username, avatar, bio, created_at, active_badge, banner_color, favorite_movie_id FROM users WHERE id=$1',
+      'SELECT id, username, avatar, bio, created_at, active_badge, banner_color, favorite_movie_id, public_profile FROM users WHERE id=$1',
       [friendId]
     );
     const user = userRes.rows[0];
+    if (user && user.public_profile === false) return res.status(403).json({ error: 'This user has a private profile' });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const [statsRes, wlRes, topRes, recentRes, badgesRes] = await Promise.all([
