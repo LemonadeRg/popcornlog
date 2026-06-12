@@ -162,9 +162,19 @@
           <!-- Middle: Trailer player -->
           <div style="min-width:0;">
             <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎞️ Trailers &amp; Teasers</div>
-            <div id="trailerPlayer" style="width:100%; aspect-ratio:16/9; background:#111; border-radius:14px; overflow:hidden;">
-              <iframe id="trailerIframe" width="100%" height="100%" frameborder="0" allowfullscreen
-                allow="encrypted-media; picture-in-picture" style="display:block;"></iframe>
+            <div style="position:relative;">
+              <div id="trailerPlayer" style="width:100%; aspect-ratio:16/9; background:#111; border-radius:14px; overflow:hidden;">
+                <iframe id="trailerIframe" width="100%" height="100%" frameborder="0" allowfullscreen
+                  allow="encrypted-media; picture-in-picture" style="display:block;"></iframe>
+              </div>
+              <!-- Prev arrow -->
+              <button onclick="prevTrailer()" id="trailerPrevBtn"
+                style="position:absolute; top:50%; left:-18px; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:1.1em; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:background 0.15s; z-index:2;"
+                onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">‹</button>
+              <!-- Next arrow -->
+              <button onclick="nextTrailer()" id="trailerNextBtn"
+                style="position:absolute; top:50%; right:-18px; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:1.1em; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:background 0.15s; z-index:2;"
+                onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">›</button>
             </div>
             <div style="margin-top:10px;">
               <div id="trailerFeaturedTitle" style="font-size:1em; font-weight:800; color:var(--text);"></div>

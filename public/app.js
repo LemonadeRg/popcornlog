@@ -764,10 +764,21 @@ let _trailers = [];
 let _currentTrailerIdx = 0;
 let _ytPlayer = null;
 
+function prevTrailer() { if (_currentTrailerIdx > 0) setFeaturedTrailer(_currentTrailerIdx - 1); }
+function nextTrailer() { if (_currentTrailerIdx < _trailers.length - 1) setFeaturedTrailer(_currentTrailerIdx + 1); }
+
+function updateTrailerArrows() {
+  const prev = document.getElementById('trailerPrevBtn');
+  const next = document.getElementById('trailerNextBtn');
+  if (prev) prev.style.opacity = _currentTrailerIdx === 0 ? '0.3' : '1';
+  if (next) next.style.opacity = _currentTrailerIdx === _trailers.length - 1 ? '0.3' : '1';
+}
+
 function setFeaturedTrailer(idx) {
   const t = _trailers[idx];
   if (!t) return;
   _currentTrailerIdx = idx;
+  updateTrailerArrows();
   const titleEl = document.getElementById('trailerFeaturedTitle');
   const metaEl  = document.getElementById('trailerFeaturedMeta');
   if (titleEl) titleEl.textContent = t.title;
