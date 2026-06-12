@@ -494,7 +494,7 @@ app.get('/api/trailers', requireAuth, async (req, res) => {
   try {
     const tr = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}&language=en-US`);
     const data = await tr.json();
-    const movies = (data.results || []).slice(0, 8);
+    const movies = (data.results || []).slice(0, 15);
     const withTrailers = await Promise.all(movies.map(async m => {
       try {
         const vr = await fetch(`${TMDB_BASE}/movie/${m.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
@@ -512,7 +512,7 @@ app.get('/api/trailers', requireAuth, async (req, res) => {
         };
       } catch { return null; }
     }));
-    res.json(withTrailers.filter(Boolean).slice(0, 5));
+    res.json(withTrailers.filter(Boolean).slice(0, 10));
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 

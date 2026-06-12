@@ -834,6 +834,15 @@ async function loadTrailers() {
       `).join('');
     }
 
+    // Match up-next list height to the player height
+    const player = document.getElementById('trailerPlayer');
+    const upNextEl = document.getElementById('trailerUpNext');
+    if (player && upNextEl) {
+      const syncHeight = () => { upNextEl.style.maxHeight = player.offsetHeight + 'px'; };
+      syncHeight();
+      window.addEventListener('resize', syncHeight);
+    }
+
     // Load first trailer — init via IFrame API if already loaded, else set src directly
     if (typeof YT !== 'undefined' && YT.Player) {
       setFeaturedTrailer(0);
