@@ -296,16 +296,13 @@
         <div style="max-width:580px; margin:0 auto;">
           <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:3px; color:var(--text-muted); font-weight:700; margin-bottom:24px;">⚙️ Settings</div>
 
-          <!-- Movie Preferences -->
+          <!-- Appearance -->
           <div class="settings-card">
-            <div class="settings-card-title">🎬 Movie Preferences</div>
-            <div class="settings-row">
-              <div>
-                <div class="settings-row-label">Favorite Genres</div>
-                <div class="settings-row-sub">Pick genres you love</div>
-              </div>
+            <div class="settings-card-title">🎨 Appearance</div>
+            <div style="padding:16px 0; border-bottom:1px solid var(--border);">
+              <div class="settings-row-label" style="margin-bottom:12px;">Theme</div>
+              <div id="themeGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;"></div>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; padding:0 0 16px; border-bottom:1px solid var(--border);" id="genreChips"></div>
             <div class="settings-row" style="border-bottom:none;">
               <div>
                 <div class="settings-row-label">Hide Spoilers</div>

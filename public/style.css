@@ -33,6 +33,67 @@ body.light-mode {
   --text-muted:#9aa5b4;
   --red:       #e84040;
 }
+/* ── Themes ── */
+body.theme-midnight {
+  --bg:        #0a0e1a;
+  --surface:   #111827;
+  --surface2:  #1a2235;
+  --border:    #1e2d45;
+  --green:     #3b82f6;
+  --green-dim: #2563eb;
+  --text:      #e2e8f0;
+  --text-dim:  #6b8aad;
+  --text-muted:#2d4a6b;
+  --orange:    #f59e0b;
+}
+body.theme-sunset {
+  --bg:        #1a0f0a;
+  --surface:   #261510;
+  --surface2:  #321c14;
+  --border:    #4a2518;
+  --green:     #f97316;
+  --green-dim: #ea6c10;
+  --text:      #fde8d8;
+  --text-dim:  #c4856a;
+  --text-muted:#6b3a28;
+  --orange:    #fbbf24;
+}
+body.theme-forest {
+  --bg:        #0a110d;
+  --surface:   #111a13;
+  --surface2:  #192219;
+  --border:    #233228;
+  --green:     #4ade80;
+  --green-dim: #22c55e;
+  --text:      #dcfce7;
+  --text-dim:  #6aab7a;
+  --text-muted:#2d5a3a;
+  --orange:    #fbbf24;
+}
+body.theme-purple {
+  --bg:        #0f0a1e;
+  --surface:   #17102b;
+  --surface2:  #201638;
+  --border:    #2d1f50;
+  --green:     #a855f7;
+  --green-dim: #9333ea;
+  --text:      #ede9fe;
+  --text-dim:  #8b6db5;
+  --text-muted:#3d2870;
+  --orange:    #f59e0b;
+}
+body.theme-amoled {
+  --bg:        #000000;
+  --surface:   #0a0a0a;
+  --surface2:  #141414;
+  --border:    #1f1f1f;
+  --green:     #00e054;
+  --green-dim: #00b843;
+  --text:      #e0e0e0;
+  --text-dim:  #666666;
+  --text-muted:#333333;
+  --orange:    #f0b429;
+}
 
 body {
   font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -2091,3 +2152,26 @@ body.light-mode .auth-input {
   color: #000;
   border-color: var(--green);
 }
+
+/* Theme picker cards */
+.theme-card {
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.15s;
+  text-align: center;
+}
+.theme-card:hover { transform: translateY(-2px); }
+.theme-card.active { border-color: var(--green); }
+.theme-card-preview {
+  height: 48px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  overflow: hidden;
+}
+.theme-card-preview-bar { flex: 1; border-radius: 3px; }
+.theme-card-label { font-size: 0.72em; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }

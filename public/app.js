@@ -31,11 +31,9 @@ function updateThemeIcon(isLight) {
 
 // Apply saved theme on load
 (function() {
-  const saved = localStorage.getItem('theme');
-  if (saved === 'light') {
-    document.body.classList.add('light-mode');
-    updateThemeIcon(true);
-  }
+  const saved = localStorage.getItem('popcornTheme') || localStorage.getItem('theme') && 'light' || 'dark';
+  if (saved === 'light') document.body.classList.add('light-mode');
+  else if (saved !== 'dark') document.body.classList.add(`theme-${saved}`);
 })();
 
 let allMovies = [];
@@ -1689,7 +1687,45 @@ async function changeUsername() {
 }
 
 // ===== SETTINGS =====
-const GENRES = ['Action','Adventure','Animation','Comedy','Crime','Documentary','Drama','Fantasy','Horror','Mystery','Romance','Sci-Fi','Thriller'];
+const THEMES = [
+  { id: 'dark',     label: 'Dark',     bg: '#14181c', surface: '#1c2228', accent: '#00e054' },
+  { id: 'light',    label: 'Light',    bg: '#f0f2f5', surface: '#ffffff', accent: '#00a83e' },
+  { id: 'midnight', label: 'Midnight', bg: '#0a0e1a', surface: '#111827', accent: '#3b82f6' },
+  { id: 'sunset',   label: 'Sunset',   bg: '#1a0f0a', surface: '#261510', accent: '#f97316' },
+  { id: 'forest',   label: 'Forest',   bg: '#0a110d', surface: '#111a13', accent: '#4ade80' },
+  { id: 'purple',   label: 'Purple',   bg: '#0f0a1e', surface: '#17102b', accent: '#a855f7' },
+  { id: 'amoled',   label: 'AMOLED',   bg: '#000000', surface: '#0a0a0a', accent: '#00e054' },
+];
+
+function applyTheme(id) {
+  // Remove all theme classes
+  document.body.classList.remove('light-mode', ...THEMES.filter(t => t.id !== 'dark' && t.id !== 'light').map(t => `theme-${t.id}`));
+  if (id === 'light') document.body.classList.add('light-mode');
+  else if (id !== 'dark') document.body.classList.add(`theme-${id}`);
+  localStorage.setItem('popcornTheme', id);
+  // Update theme toggle button icon
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = id === 'light' ? '🌙' : '☀️';
+  // Re-render theme grid if visible
+  renderThemeGrid();
+}
+
+function renderThemeGrid() {
+  const grid = document.getElementById('themeGrid');
+  if (!grid) return;
+  const current = localStorage.getItem('popcornTheme') || 'dark';
+  grid.innerHTML = THEMES.map(t => `
+    <div class="theme-card ${current === t.id ? 'active' : ''}" onclick="applyTheme('${t.id}')">
+      <div class="theme-card-preview" style="background:${t.bg};">
+        <div class="theme-card-preview-bar" style="background:${t.surface};"></div>
+        <div class="theme-card-preview-bar" style="background:${t.accent}; flex:0.4;"></div>
+      </div>
+      <div class="theme-card-label">${t.label}</div>
+    </div>
+  `).join('');
+}
+
+const GENRES = [];
 
 function savePref(key, value) {
   const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
@@ -1699,18 +1735,12 @@ function savePref(key, value) {
 
 function loadSettings() {
   const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
-  // Toggles
-  document.getElementById('toggleSpoilers').checked    = !!prefs.hideSpoilers;
+  document.getElementById('toggleSpoilers').checked       = !!prefs.hideSpoilers;
   document.getElementById('toggleFriendActivity').checked = prefs.friendActivity !== false;
   document.getElementById('toggleBadgeAlerts').checked    = prefs.badgeAlerts    !== false;
-  document.getElementById('togglePublicProfile').checked  = prefs.publicProfile   !== false;
+  document.getElementById('togglePublicProfile').checked  = prefs.publicProfile  !== false;
   document.getElementById('toggleLeaderboard').checked    = prefs.showLeaderboard !== false;
-  // (sort is on the movies page now)
-  // Genre chips
-  const selected = prefs.genres || [];
-  document.getElementById('genreChips').innerHTML = GENRES.map(g => `
-    <span class="genre-chip ${selected.includes(g) ? 'active' : ''}" onclick="toggleGenre(this,'${g}')">${g}</span>
-  `).join('');
+  renderThemeGrid();
 }
 
 function applyDefaultSort(value) {
@@ -1729,15 +1759,6 @@ function sortMoviesList(movies, sortBy) {
   return copy; // date — already in DESC order from server
 }
 
-function toggleGenre(el, genre) {
-  el.classList.toggle('active');
-  const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
-  const genres = prefs.genres || [];
-  const idx = genres.indexOf(genre);
-  if (idx === -1) genres.push(genre); else genres.splice(idx, 1);
-  prefs.genres = genres;
-  localStorage.setItem('popcornPrefs', JSON.stringify(prefs));
-}
 
 async function changePassword() {
   const currentPassword = document.getElementById('currentPassword').value;
