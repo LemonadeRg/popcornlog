@@ -96,11 +96,6 @@
       <div class="app-topbar-title"><span id="topbarSectionName">🏠 Home</span></div>
       <!-- Right controls -->
       <div class="app-topbar-controls" style="margin-left:auto;">
-        <select onchange="setLang(this.value)" id="langSelect" style="padding:6px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:0.85em; cursor:pointer;">
-          <option value="en">🌐 EN</option>
-          <option value="fr">🌐 FR</option>
-          <option value="ar">🌐 AR</option>
-        </select>
         <button id="themeToggle" onclick="toggleTheme()" style="padding:6px 12px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:1.1em;" title="Toggle light/dark mode">🌙</button>
       </div>
     </div>
@@ -317,32 +312,6 @@
         <div style="max-width:580px; margin:0 auto;">
           <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:3px; color:var(--text-muted); font-weight:700; margin-bottom:24px;">⚙️ Settings</div>
 
-          <!-- Profile quick-links -->
-          <div class="settings-card">
-            <div class="settings-card-title">👤 Profile</div>
-            <div class="settings-row" onclick="showSection('profile')" style="cursor:pointer;">
-              <div>
-                <div class="settings-row-label">Edit Profile</div>
-                <div class="settings-row-sub">Avatar, bio, banner, favorite movie</div>
-              </div>
-              <span class="settings-chevron">›</span>
-            </div>
-            <div class="settings-row" onclick="showSection('profile')" style="cursor:pointer;">
-              <div>
-                <div class="settings-row-label">Change Username</div>
-                <div class="settings-row-sub">Update your display name</div>
-              </div>
-              <span class="settings-chevron">›</span>
-            </div>
-            <div class="settings-row" onclick="showSection('profile'); setTimeout(()=>document.getElementById('currentPassword')?.scrollIntoView({behavior:'smooth'}),400)" style="cursor:pointer; border-bottom:none;">
-              <div>
-                <div class="settings-row-label">Change Password</div>
-                <div class="settings-row-sub">Update your account password</div>
-              </div>
-              <span class="settings-chevron">›</span>
-            </div>
-          </div>
-
           <!-- Movie Preferences -->
           <div class="settings-card">
             <div class="settings-card-title">🎬 Movie Preferences</div>
@@ -415,30 +384,38 @@
             </div>
           </div>
 
-          <!-- Language -->
+          <!-- Movie Sort -->
           <div class="settings-card">
-            <div class="settings-card-title">🌐 Language</div>
+            <div class="settings-card-title">🗂️ My Movies</div>
             <div class="settings-row" style="border-bottom:none;">
               <div>
-                <div class="settings-row-label">Display Language</div>
-                <div class="settings-row-sub">Interface language</div>
+                <div class="settings-row-label">Default Sort</div>
+                <div class="settings-row-sub">How your movie list is sorted by default</div>
               </div>
-              <select id="langSelect" onchange="savePref('language', this.value)"
+              <select id="defaultSortSelect" onchange="applyDefaultSort(this.value)"
                 style="background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:inherit; font-size:0.85em; cursor:pointer;">
-                <option value="en">🇬🇧 English</option>
-                <option value="fr">🇫🇷 Français</option>
-                <option value="ar">🇲🇦 العربية</option>
+                <option value="date">📅 Date Added</option>
+                <option value="rating">⭐ My Rating</option>
+                <option value="title">🔤 Title (A–Z)</option>
+                <option value="year">📆 Release Year</option>
               </select>
             </div>
           </div>
 
-          <!-- Sign out / danger -->
+          <!-- Account / danger -->
           <div class="settings-card" style="border-color:rgba(232,64,64,0.2);">
             <div class="settings-card-title" style="color:var(--red);">⚠️ Account</div>
-            <div class="settings-row" style="border-bottom:none; cursor:pointer;" onclick="handleLogout()">
+            <div class="settings-row" style="cursor:pointer;" onclick="handleLogout()">
               <div>
                 <div class="settings-row-label" style="color:var(--red);">Sign Out</div>
                 <div class="settings-row-sub">Log out of your account</div>
+              </div>
+              <span class="settings-chevron" style="color:var(--red);">›</span>
+            </div>
+            <div class="settings-row" style="border-bottom:none; cursor:pointer;" onclick="deleteAccount()">
+              <div>
+                <div class="settings-row-label" style="color:var(--red);">Delete Account</div>
+                <div class="settings-row-sub">Permanently delete your account and all data</div>
               </div>
               <span class="settings-chevron" style="color:var(--red);">›</span>
             </div>

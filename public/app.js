@@ -946,7 +946,8 @@ async function loadMovies() {
       const response = await fetch('/api/movies');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       allMovies = await response.json();
-      displayMovies(allMovies);
+      const prefs = JSON.parse(localStorage.getItem('popcornPrefs') || '{}');
+      displayMovies(sortMoviesList(allMovies, prefs.defaultSort || 'date'));
       return; // success
     } catch (error) {
       console.warn(`loadMovies attempt ${i+1} failed:`, error.message);
@@ -1704,13 +1705,28 @@ function loadSettings() {
   document.getElementById('toggleBadgeAlerts').checked    = prefs.badgeAlerts    !== false;
   document.getElementById('togglePublicProfile').checked  = prefs.publicProfile   !== false;
   document.getElementById('toggleLeaderboard').checked    = prefs.showLeaderboard !== false;
-  // Language
-  if (prefs.language) document.getElementById('langSelect').value = prefs.language;
+  // Default sort
+  if (prefs.defaultSort) document.getElementById('defaultSortSelect').value = prefs.defaultSort;
   // Genre chips
   const selected = prefs.genres || [];
   document.getElementById('genreChips').innerHTML = GENRES.map(g => `
     <span class="genre-chip ${selected.includes(g) ? 'active' : ''}" onclick="toggleGenre(this,'${g}')">${g}</span>
   `).join('');
+}
+
+function applyDefaultSort(value) {
+  savePref('defaultSort', value);
+  // Re-render movies with new sort immediately
+  const sorted = sortMoviesList(allMovies, value);
+  displayMovies(sorted);
+}
+
+function sortMoviesList(movies, sortBy) {
+  const copy = [...movies];
+  if (sortBy === 'rating') return copy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  if (sortBy === 'title')  return copy.sort((a, b) => a.title.localeCompare(b.title));
+  if (sortBy === 'year')   return copy.sort((a, b) => (b.year || 0) - (a.year || 0));
+  return copy; // date — already in DESC order from server
 }
 
 function toggleGenre(el, genre) {
