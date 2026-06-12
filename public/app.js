@@ -762,23 +762,45 @@ async function loadHomeTrending() {}
 
 let _trailers = [];
 let _currentTrailerIdx = 0;
+let _ytPlayer = null;
 
 function setFeaturedTrailer(idx) {
   const t = _trailers[idx];
   if (!t) return;
   _currentTrailerIdx = idx;
-  const iframe = document.getElementById('trailerIframe');
   const titleEl = document.getElementById('trailerFeaturedTitle');
-  const metaEl = document.getElementById('trailerFeaturedMeta');
-  if (iframe) iframe.src = `https://www.youtube-nocookie.com/embed/${t.youtubeKey}?rel=0&modestbranding=1`;
+  const metaEl  = document.getElementById('trailerFeaturedMeta');
   if (titleEl) titleEl.textContent = t.title;
-  if (metaEl) metaEl.textContent = `${t.year || ''} · ${t.type || 'Trailer'} · ⭐ ${t.rating || ''}`;
+  if (metaEl)  metaEl.textContent  = `${t.year || ''} · ${t.type || 'Trailer'} · ⭐ ${t.rating || ''}`;
   // Update up-next highlighting
   document.querySelectorAll('.trailer-up-next-item').forEach((el, i) => {
     el.style.background = i === idx ? 'var(--surface2)' : 'transparent';
-    el.style.border = i === idx ? '1px solid var(--border)' : '1px solid transparent';
+    el.style.border     = i === idx ? '1px solid var(--border)' : '1px solid transparent';
   });
+  if (_ytPlayer && _ytPlayer.loadVideoById) {
+    _ytPlayer.loadVideoById(t.youtubeKey);
+  } else {
+    const iframe = document.getElementById('trailerIframe');
+    if (iframe) iframe.src = `https://www.youtube-nocookie.com/embed/${t.youtubeKey}?rel=0&modestbranding=1&enablejsapi=1`;
+  }
 }
+
+// Called by YouTube IFrame API when ready
+window.onYouTubeIframeAPIReady = function() {
+  const iframe = document.getElementById('trailerIframe');
+  if (!iframe || !_trailers.length) return;
+  _ytPlayer = new YT.Player('trailerIframe', {
+    events: {
+      onError: function(e) {
+        // 101 / 150 = geo-restricted or embedding disabled — skip to next
+        if (e.data === 101 || e.data === 150 || e.data === 2) {
+          const next = _currentTrailerIdx + 1;
+          if (next < _trailers.length) setFeaturedTrailer(next);
+        }
+      }
+    }
+  });
+};
 
 async function loadTrailers() {
   const section = document.getElementById('trailersSection');
@@ -812,8 +834,32 @@ async function loadTrailers() {
       `).join('');
     }
 
-    // Load first trailer
-    setFeaturedTrailer(0);
+    // Load first trailer — init via IFrame API if already loaded, else set src directly
+    if (typeof YT !== 'undefined' && YT.Player) {
+      setFeaturedTrailer(0);
+      window.onYouTubeIframeAPIReady();
+    } else {
+      // Set src now; API will take over once script loads
+      const iframe = document.getElementById('trailerIframe');
+      if (iframe) iframe.src = `https://www.youtube-nocookie.com/embed/${_trailers[0].youtubeKey}?rel=0&modestbranding=1&enablejsapi=1`;
+      const titleEl = document.getElementById('trailerFeaturedTitle');
+      const metaEl  = document.getElementById('trailerFeaturedMeta');
+      const t = _trailers[0];
+      if (titleEl) titleEl.textContent = t.title;
+      if (metaEl)  metaEl.textContent  = `${t.year || ''} · ${t.type || 'Trailer'} · ⭐ ${t.rating || ''}`;
+      // Highlight first item
+      document.querySelectorAll('.trailer-up-next-item').forEach((el, i) => {
+        el.style.background = i === 0 ? 'var(--surface2)' : 'transparent';
+        el.style.border     = i === 0 ? '1px solid var(--border)' : '1px solid transparent';
+      });
+      // Load YT API script
+      if (!document.getElementById('yt-api-script')) {
+        const s = document.createElement('script');
+        s.id  = 'yt-api-script';
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(s);
+      }
+    }
   } catch(e) {
     if (section) section.style.display = 'none';
   }
