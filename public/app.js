@@ -610,50 +610,55 @@ function renderHomeData(d) {
   // Stats
   if (statsEl) {
     const days = Math.round((s.hours || 0) / 24 * 10) / 10;
-    statsEl.innerHTML = `
-      <div class="home-stat-card stat-green">
-        <div class="stat-icon">🎬</div>
-        <div class="stat-value">${s.total || 0}</div>
-        <div class="stat-label">Films Logged</div>
-        <div class="stat-sub">${s.topGenre ? `Top genre: ${s.topGenre}` : 'Keep watching!'}</div>
+    const statData = [
+      { icon:'🎬', value: s.total || 0,  unit:'', label:'Films Logged',  sub: s.topGenre ? s.topGenre : 'Keep watching!', accent:'var(--green)' },
+      { icon:'⏱️', value: s.hours || 0,  unit:'hrs', label:'Time Watched', sub: `${days} days of cinema`, accent:'#3b82f6' },
+      { icon:'⭐', value: s.avgRating || '—', unit:'', label:'Avg Rating', sub: s.avgRating >= 4 ? 'You love movies!' : s.avgRating ? 'Picky critic 🎭' : 'Rate some films', accent:'#f0b429' },
+      { icon: (s.streak||0)>2?'🔥':'📅', value: s.streak||0, unit:'', label:'Day Streak', sub: (s.streak||0)>0?`${s.streak} day${s.streak>1?'s':''} in a row`:'Start your streak!', accent:'#f97316' },
+    ];
+    statsEl.innerHTML = statData.map(st => `
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px; position:relative; overflow:hidden;">
+        <div style="position:absolute; top:0; left:0; right:0; height:3px; background:${st.accent};"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <div style="font-size:1.3em;">${st.icon}</div>
+          <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); font-weight:700;">${st.label}</div>
+        </div>
+        <div style="font-size:2em; font-weight:800; color:${st.accent}; line-height:1;">${st.value}<span style="font-size:0.4em; font-weight:500; margin-left:3px; color:var(--text-dim);">${st.unit}</span></div>
+        <div style="font-size:0.75em; color:var(--text-muted); margin-top:5px;">${st.sub}</div>
       </div>
-      <div class="home-stat-card stat-blue">
-        <div class="stat-icon">⏱️</div>
-        <div class="stat-value">${s.hours || 0}<span style="font-size:0.5em;font-weight:500;margin-left:3px;">hrs</span></div>
-        <div class="stat-label">Time Watched</div>
-        <div class="stat-sub">${days} days of cinema</div>
-      </div>
-      <div class="home-stat-card stat-gold">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-value">${s.avgRating || '—'}</div>
-        <div class="stat-label">Avg Rating</div>
-        <div class="stat-sub">${s.avgRating >= 4 ? 'You love movies!' : s.avgRating ? 'Picky critic 🎭' : 'Rate some films'}</div>
-      </div>
-      <div class="home-stat-card stat-orange">
-        <div class="stat-icon">${(s.streak || 0) > 2 ? '🔥' : '📅'}</div>
-        <div class="stat-value">${s.streak || 0}</div>
-        <div class="stat-label">Day Streak</div>
-        <div class="stat-sub">${(s.streak || 0) > 0 ? `${s.streak} day${s.streak > 1 ? 's' : ''} in a row` : 'Start your streak!'}</div>
-      </div>`;
+    `).join('');
   }
 
-  // Leaderboard
+  // Greeting
+  const greetingEl = document.getElementById('homeGreetingText');
+  const subEl = document.getElementById('homeGreetingSub');
+  if (greetingEl && d.stats) {
+    const hour = new Date().getHours();
+    const timeGreet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    greetingEl.textContent = `${timeGreet}, ${d.username || ''}! 👋`;
+    if (subEl) subEl.textContent = `${d.stats.total || 0} films logged · ${d.stats.hours || 0}hrs watched`;
+  }
+
+  // Leaderboard — compact vertical list
   if (podium) {
     const lb = d.leaderboard || [];
     if (!lb.length) {
-      podium.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;padding:16px 0;text-align:center;">No data yet</div>`;
+      podium.innerHTML = `<div style="color:var(--text-muted);font-size:0.85em;text-align:center;">No data yet</div>`;
     } else {
       const rankColors = ['#FFD700','#C0C0C0','#CD7F32'];
+      const medals = ['🥇','🥈','🥉'];
       podium.innerHTML = lb.map((u, i) => {
         const pct = lb[0].movie_count > 0 ? Math.round((u.movie_count / lb[0].movie_count) * 100) : 0;
-        return `<div class="leaderboard-card">
-          <div class="lb-rank" style="color:${rankColors[i] || 'var(--text-muted)'}">${['🥇','🥈','🥉'][i] || i+1}</div>
-          <div class="lb-avatar">${avatarWithBadge(u.avatar, u.active_badge, '1.8em')}</div>
-          <div class="lb-info">
-            <div class="lb-name">${u.username}</div>
-            <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${pct}%;background:${rankColors[i]}"></div></div>
+        return `<div style="display:flex; align-items:center; gap:10px;">
+          <div style="font-size:1.3em; width:24px; text-align:center; flex-shrink:0;">${medals[i] || i+1}</div>
+          <div style="font-size:1.5em; flex-shrink:0;">${avatarWithBadge(u.avatar, u.active_badge, '1.4em')}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.85em; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.username}</div>
+            <div style="height:4px; background:var(--surface2); border-radius:2px; margin-top:4px; overflow:hidden;">
+              <div style="height:100%; width:${pct}%; background:${rankColors[i]}; border-radius:2px; transition:width 0.6s;"></div>
+            </div>
           </div>
-          <div class="lb-count">${u.movie_count} <span style="font-size:0.7em;opacity:0.6">films</span></div>
+          <div style="font-size:0.75em; font-weight:700; color:var(--text-dim); flex-shrink:0;">${u.movie_count}<span style="font-size:0.8em;opacity:0.6"> films</span></div>
         </div>`;
       }).join('');
     }

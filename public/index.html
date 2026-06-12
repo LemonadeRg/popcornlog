@@ -127,46 +127,50 @@
       <!-- HOME SECTION -->
       <div id="homeSection">
 
-        <!-- Stats row -->
-        <div id="homeStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;"></div>
-
-        <!-- Leaderboard -->
-        <div style="margin-bottom:28px;">
-          <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🏆 Top Watchers</div>
-          <div id="leaderboardPodium" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;"></div>
+        <!-- Greeting -->
+        <div id="homeGreeting" style="margin-bottom:22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div id="homeGreetingText" style="font-size:1.4em; font-weight:800; color:var(--text);">👋 Welcome back!</div>
+            <div style="font-size:0.8em; color:var(--text-muted); margin-top:2px;" id="homeGreetingSub">Here's what's happening</div>
+          </div>
         </div>
 
-        <!-- Two column layout: feed + right panel -->
-        <div style="display:grid; grid-template-columns:1fr 300px; gap:24px; align-items:start; min-width:0;">
+        <!-- Stats row -->
+        <div id="homeStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;"></div>
 
-          <!-- Activity Feed -->
-          <div style="min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; padding-top:14px;">
-            <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📰 Friend Activity</div>
+        <!-- Main grid: leaderboard + feed + right col -->
+        <div style="display:grid; grid-template-columns:220px 1fr 280px; gap:18px; align-items:start; min-width:0;">
+
+          <!-- Left: Leaderboard -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
+            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🏆 Top Watchers</div>
+            <div id="leaderboardPodium" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+
+          <!-- Middle: Activity Feed -->
+          <div style="min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
+            <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">📰 Friend Activity</div>
             <div id="homeFeed"></div>
           </div>
 
-          <!-- Right column: Mood picker + Trending -->
-          <div style="display:flex; flex-direction:column; gap:24px;">
-
-            <!-- Mood picker -->
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; padding-top:14px;">
-              <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🎬 What to watch tonight?</div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+          <!-- Right: Mood + Trending -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
+              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🎬 What to watch tonight?</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px;">
                 <button onclick="pickMood('chill')" class="mood-btn">😌 Chill</button>
                 <button onclick="pickMood('intense')" class="mood-btn">😤 Intense</button>
-                <button onclick="pickMood('laugh')" class="mood-btn">😂 Make me laugh</button>
-                <button onclick="pickMood('surprise')" class="mood-btn">🎲 Surprise me</button>
+                <button onclick="pickMood('laugh')" class="mood-btn">😂 Laugh</button>
+                <button onclick="pickMood('surprise')" class="mood-btn">🎲 Surprise</button>
               </div>
               <div id="moodResult" style="display:none;"></div>
             </div>
-
-            <!-- Trending -->
-            <div>
-              <div style="font-size:0.72em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:14px;">🔥 Trending This Week</div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
+              <div style="font-size:0.68em; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-bottom:12px;">🔥 Trending This Week</div>
               <div id="homeTrending"></div>
             </div>
-
           </div>
+
         </div>
       </div>
 

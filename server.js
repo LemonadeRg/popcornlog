@@ -405,6 +405,7 @@ app.get('/api/home/all', requireAuth, async (req, res) => {
     } catch(_) {}
 
     res.json({
+      username: req.session.username || '',
       stats: {
         total: parseInt(moviesRes.rows[0]?.total) || 0,
         hours: Math.round((moviesRes.rows[0]?.minutes || 0) / 60),
