@@ -2122,32 +2122,16 @@ async function loadGamesHub() {
     const xpToNext = 500 - (gs.xp % 500);
     const xpPct = Math.round(((gs.xp % 500) / 500) * 100);
     document.getElementById('gameStatsRow').innerHTML = `
-      <div class="home-stat-card stat-gold">
-        <div class="stat-icon">⚡</div>
-        <div class="stat-value">${gs.level}</div>
-        <div class="stat-label">Level</div>
-        <div class="stat-sub">${gs.xp % 500} / 500 XP</div>
-        <div style="margin-top:8px;height:4px;background:var(--border);border-radius:4px;overflow:hidden;">
-          <div style="height:100%;width:${xpPct}%;background:#E8B84B;border-radius:4px;transition:width 0.6s;"></div>
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 24px; display:flex; align-items:center; gap:20px; grid-column:1/-1;">
+        <div style="font-size:2em;">⚡</div>
+        <div>
+          <div style="font-size:1.1em; font-weight:800; color:#E8B84B;">Level ${gs.level}</div>
+          <div style="font-size:0.78em; color:var(--text-muted); margin-top:2px;">${gs.xp % 500} / 500 XP to next level</div>
         </div>
-      </div>
-      <div class="home-stat-card stat-green">
-        <div class="stat-icon">🎮</div>
-        <div class="stat-value">${gs.total_games}</div>
-        <div class="stat-label">Games Played</div>
-        <div class="stat-sub">Keep playing!</div>
-      </div>
-      <div class="home-stat-card stat-orange">
-        <div class="stat-icon">🔥</div>
-        <div class="stat-value">${gs.current_streak}</div>
-        <div class="stat-label">Day Streak</div>
-        <div class="stat-sub">Best: ${gs.best_streak} days</div>
-      </div>
-      <div class="home-stat-card stat-blue">
-        <div class="stat-icon">🏆</div>
-        <div class="stat-value">${gs.quiz_wins + gs.poster_guesses + (gs.total_games || 0)}</div>
-        <div class="stat-label">Total Wins</div>
-        <div class="stat-sub">Across all games</div>
+        <div style="flex:1; height:8px; background:var(--surface2); border-radius:4px; overflow:hidden;">
+          <div style="height:100%; width:${xpPct}%; background:#E8B84B; border-radius:4px; transition:width 0.6s;"></div>
+        </div>
+        <div style="font-size:0.78em; color:var(--text-muted); white-space:nowrap;">${xpPct}%</div>
       </div>`;
     // Update game card meta
     const qs = document.getElementById('gcQuizStreak');
