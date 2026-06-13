@@ -1623,7 +1623,18 @@ async function loadProfile() {
     const res = await fetch('/api/profile');
     const data = await res.json();
 
-    document.getElementById('profileAvatar').textContent = data.avatar;
+    const avatarEl = document.getElementById('profileAvatar');
+    if (data.avatar?.startsWith('http')) {
+      avatarEl.textContent = '';
+      avatarEl.style.backgroundImage = `url('${data.avatar}')`;
+      avatarEl.style.backgroundSize = 'cover';
+      avatarEl.style.backgroundPosition = 'center';
+      avatarEl._photoUrl = data.avatar;
+    } else {
+      avatarEl.textContent = data.avatar || '🎬';
+      avatarEl.style.backgroundImage = '';
+      avatarEl._photoUrl = null;
+    }
     document.getElementById('profileUsername').textContent = data.username;
     document.getElementById('profileEmail').textContent = data.email;
     document.getElementById('profileBio').value = data.bio;
@@ -1748,7 +1759,8 @@ function selectBanner(color) {
 
 async function saveProfile() {
   const bio = document.getElementById('profileBio').value.trim();
-  const avatar = document.getElementById('profileAvatar').textContent;
+  const avatarEl = document.getElementById('profileAvatar');
+  const avatar = avatarEl._photoUrl || avatarEl.textContent;
   const favoriteMovieId = document.getElementById('favMovieSelect')?.value || null;
 
   const res = await fetch('/api/profile', {
@@ -1983,9 +1995,13 @@ const BADGE_EMOJI = {
 // Helper: render avatar + badge bubble together
 function avatarWithBadge(avatar, activeBadgeId, size = '1.6em') {
   const badgeEmoji = activeBadgeId ? (BADGE_EMOJI[activeBadgeId] || null) : null;
-  if (!badgeEmoji) return `<span style="font-size:${size};">${avatar || '🎬'}</span>`;
+  const isPhoto = avatar?.startsWith('http');
+  const inner = isPhoto
+    ? `<span style="display:inline-block;width:${size};height:${size};border-radius:50%;background:url('${avatar}') center/cover;vertical-align:middle;flex-shrink:0;"></span>`
+    : `<span style="font-size:${size};">${avatar || '🎬'}</span>`;
+  if (!badgeEmoji) return inner;
   return `<span style="position:relative;display:inline-block;">
-    <span style="font-size:${size};">${avatar || '🎬'}</span>
+    ${inner}
     <span style="position:absolute;bottom:-2px;right:-5px;font-size:0.65em;line-height:1;">${badgeEmoji}</span>
   </span>`;
 }
@@ -2023,6 +2039,46 @@ async function openAvatarPicker() {
     <div style="font-size:0.72em;text-transform:uppercase;letter-spacing:2px;color:#E8B84B;font-weight:700;margin:14px 0 10px;grid-column:1/-1;">🏆 Level Rewards · You are Level ${currentLevel}</div>
     ${levelGrid}
   `;
+
+  // Load cast avatars from favorite movie if one is selected
+  const favSel = document.getElementById('favMovieSelect');
+  const favOpt = favSel?.options[favSel.selectedIndex];
+  const favTitle = favOpt?.value ? favOpt.textContent.replace(/\s*\(\d{4}\)$/, '').trim() : null;
+  const favYear  = favOpt?.value ? (favOpt.textContent.match(/\((\d{4})\)/)?.[1] || '') : null;
+
+  const castSection = document.getElementById('avatarCastSection');
+  if (castSection) castSection.remove(); // clear previous
+
+  if (favTitle) {
+    const grid = document.getElementById('avatarGrid');
+    const placeholder = document.createElement('div');
+    placeholder.id = 'avatarCastSection';
+    placeholder.style.cssText = 'grid-column:1/-1;margin-top:14px;';
+    placeholder.innerHTML = `<div style="font-size:0.72em;text-transform:uppercase;letter-spacing:2px;color:#7c6af7;font-weight:700;margin-bottom:10px;">🎬 From "${favTitle}"</div><div style="color:var(--text-muted);font-size:0.8em;">Loading cast…</div>`;
+    grid.appendChild(placeholder);
+
+    try {
+      const res = await fetch(`/api/movie-cast?title=${encodeURIComponent(favTitle)}&year=${favYear||''}`);
+      const cast = await res.json();
+      if (cast.length) {
+        placeholder.innerHTML = `
+          <div style="font-size:0.72em;text-transform:uppercase;letter-spacing:2px;color:#7c6af7;font-weight:700;margin-bottom:12px;">🎬 From "${favTitle}"</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            ${cast.map(c => `
+              <div onclick="selectAvatarPhoto('${c.photo}')"
+                style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:8px;border-radius:10px;border:2px solid transparent;transition:all 0.15s;width:80px;"
+                onmouseover="this.style.borderColor='#7c6af7';this.style.background='var(--surface2)'"
+                onmouseout="this.style.borderColor='transparent';this.style.background='transparent'">
+                <img src="${c.photo}" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">
+                <div style="font-size:0.68em;color:var(--text-muted);text-align:center;line-height:1.2;">${c.name}</div>
+              </div>`).join('')}
+          </div>`;
+      } else {
+        placeholder.innerHTML = '';
+      }
+    } catch(e) { placeholder.innerHTML = ''; }
+  }
+
   document.getElementById('avatarModal').classList.add('active');
 }
 
@@ -2031,7 +2087,23 @@ function closeAvatarPicker() {
 }
 
 function selectAvatar(emoji) {
-  document.getElementById('profileAvatar').textContent = emoji;
+  const el = document.getElementById('profileAvatar');
+  el.textContent = emoji;
+  el.style.backgroundImage = '';
+  el.style.backgroundSize = '';
+  el.style.borderRadius = '50%';
+  el._photoUrl = null;
+  closeAvatarPicker();
+}
+
+function selectAvatarPhoto(url) {
+  const el = document.getElementById('profileAvatar');
+  el.textContent = '';
+  el.style.backgroundImage = `url('${url}')`;
+  el.style.backgroundSize = 'cover';
+  el.style.backgroundPosition = 'center';
+  el.style.borderRadius = '50%';
+  el._photoUrl = url;
   closeAvatarPicker();
 }
 
@@ -3152,7 +3224,16 @@ async function viewFriendProfile(friendId, username) {
     if (!res.ok) { showAlert('❌ ' + d.error); closeFriendProfilePage(); return; }
 
     // Avatar + badge
-    document.getElementById('fpAvatar').textContent = d.avatar;
+    const fpAvatarEl = document.getElementById('fpAvatar');
+    if (d.avatar?.startsWith('http')) {
+      fpAvatarEl.textContent = '';
+      fpAvatarEl.style.backgroundImage = `url('${d.avatar}')`;
+      fpAvatarEl.style.backgroundSize = 'cover';
+      fpAvatarEl.style.backgroundPosition = 'center';
+    } else {
+      fpAvatarEl.textContent = d.avatar || '🎬';
+      fpAvatarEl.style.backgroundImage = '';
+    }
     const fpBadgeEl = document.getElementById('fpActiveBadge');
     if (d.activeBadge && BADGE_EMOJI[d.activeBadge]) {
       fpBadgeEl.textContent = BADGE_EMOJI[d.activeBadge];

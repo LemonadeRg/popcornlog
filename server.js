@@ -490,6 +490,28 @@ app.get('/api/home/trending', async (req, res) => { // public — used for auth 
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/movie-cast', requireAuth, async (req, res) => {
+  const { title, year } = req.query;
+  if (!title) return res.status(400).json({ error: 'title required' });
+  try {
+    const search = await fetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&year=${year||''}&language=en-US`);
+    const sd = await search.json();
+    const movie = sd.results?.[0];
+    if (!movie) return res.json([]);
+    const cr = await fetch(`${TMDB_BASE}/movie/${movie.id}/credits?api_key=${TMDB_API_KEY}`);
+    const cd = await cr.json();
+    const cast = (cd.cast || [])
+      .filter(c => c.profile_path)
+      .slice(0, 3)
+      .map(c => ({
+        name: c.name,
+        character: c.character,
+        photo: `https://image.tmdb.org/t/p/w185${c.profile_path}`
+      }));
+    res.json(cast);
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/trailers', requireAuth, async (req, res) => {
   try {
     const tr = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}&language=en-US`);
