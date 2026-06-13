@@ -981,8 +981,8 @@ async function showSection(section) {
     // Show hub by default; quiz shortcut goes straight in
     document.getElementById('gamesHub').style.display = 'block';
     document.getElementById('gameQuiz').style.display = 'none';
-    document.getElementById('gameBattle').style.display = 'none';
     document.getElementById('gamePoster').style.display = 'none';
+    document.getElementById('gameSoundtrack').style.display = 'none';
     loadGamesHub();
     if (section === 'quiz') openGame('quiz');
   } else if (section === 'recommended') {
@@ -2151,11 +2151,11 @@ async function loadGamesHub() {
       </div>`;
     // Update game card meta
     const qs = document.getElementById('gcQuizStreak');
-    const bv = document.getElementById('gcBattleVotes');
+
     const pg = document.getElementById('gcPosterGuesses');
     const st = document.getElementById('gcSoundtrackPlayed');
     if (qs) qs.textContent = `🔥 Streak: ${gs.current_streak} day${gs.current_streak !== 1 ? 's' : ''}`;
-    if (bv) bv.textContent = `🗳️ ${gs.battle_votes} battle${gs.battle_votes !== 1 ? 's' : ''} voted`;
+
     if (pg) pg.textContent = `🎯 ${gs.poster_guesses} poster${gs.poster_guesses !== 1 ? 's' : ''} guessed`;
     if (st) st.textContent = `🎵 ${allMovies?.length || 0} movies available`;
   } catch(e) {}
@@ -2164,7 +2164,7 @@ async function loadGamesHub() {
 function openGame(type) {
   document.getElementById('gamesHub').style.display = 'none';
   document.getElementById('gameQuiz').style.display = 'none';
-  document.getElementById('gameBattle').style.display = 'none';
+  document.getElementById('gameBattle')?.style && (document.getElementById('gameBattle').style.display = 'none');
   document.getElementById('gamePoster').style.display = 'none';
   document.getElementById('gameSoundtrack').style.display = 'none';
   if (type === 'quiz') {
@@ -2173,9 +2173,6 @@ function openGame(type) {
     document.getElementById('quizCorrect').textContent = '0';
     document.getElementById('quizWrong').textContent = '0';
     loadQuiz();
-  } else if (type === 'battle') {
-    document.getElementById('gameBattle').style.display = 'block';
-    loadBattle();
   } else if (type === 'poster') {
     document.getElementById('gamePoster').style.display = 'block';
     posterUsedTitles = [];
@@ -2194,7 +2191,7 @@ function closeGame() {
 
   document.getElementById('gamesHub').style.display = 'block';
   document.getElementById('gameQuiz').style.display = 'none';
-  document.getElementById('gameBattle').style.display = 'none';
+  document.getElementById('gameBattle')?.style && (document.getElementById('gameBattle').style.display = 'none');
   document.getElementById('gamePoster').style.display = 'none';
   document.getElementById('gameSoundtrack').style.display = 'none';
   loadGamesHub();
