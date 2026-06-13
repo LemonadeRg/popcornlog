@@ -2303,6 +2303,7 @@ function submitPosterGuess() {
   const input = document.getElementById('posterGuessInput');
   if (!input) return;
   const guess = input.value.trim().toLowerCase();
+  if (!guess) return;
   const answer = posterData.answer.toLowerCase();
   const correct = guess === answer || answer.includes(guess) || guess.includes(answer.split(':')[0].trim());
   const pts = [100, 75, 50, 25][posterHintsUsed] || 25;
