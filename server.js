@@ -137,6 +137,7 @@ async function initDB() {
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_movie_id INTEGER REFERENCES movies(id) ON DELETE SET NULL`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_profile BOOLEAN DEFAULT TRUE`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS show_leaderboard BOOLEAN DEFAULT TRUE`);
+  await db.query(`ALTER TABLE game_stats ADD COLUMN IF NOT EXISTS soundtrack_guesses INTEGER DEFAULT 0`);
 
   // Games hub
   await db.query(`
@@ -149,6 +150,7 @@ async function initDB() {
       quiz_wins INTEGER DEFAULT 0,
       battle_votes INTEGER DEFAULT 0,
       poster_guesses INTEGER DEFAULT 0,
+      soundtrack_guesses INTEGER DEFAULT 0,
       current_streak INTEGER DEFAULT 0,
       best_streak INTEGER DEFAULT 0,
       last_played DATE
@@ -1116,7 +1118,7 @@ app.post('/api/games/xp', requireAuth, async (req, res) => {
     const newBestStreak = Math.max(gs.best_streak, newStreak);
     const newXP = gs.xp + (xp || 0);
     const newLevel = Math.floor(newXP / 500) + 1;
-    const colMap = { quiz: 'quiz_wins', battle: 'battle_votes', poster: 'poster_guesses', soundtrack: 'total_games' };
+    const colMap = { quiz: 'quiz_wins', battle: 'battle_votes', poster: 'poster_guesses', soundtrack: 'soundtrack_guesses' };
     const col = colMap[gameType] || 'total_games';
     await db.query(`
       UPDATE game_stats SET xp=$1, level=$2, total_games=total_games+1,

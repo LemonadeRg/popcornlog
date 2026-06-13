@@ -2145,9 +2145,9 @@ async function loadGamesHub() {
       </div>
       <div class="home-stat-card stat-blue">
         <div class="stat-icon">🏆</div>
-        <div class="stat-value">${gs.quiz_wins + gs.poster_guesses}</div>
+        <div class="stat-value">${gs.quiz_wins + gs.poster_guesses + (gs.total_games || 0)}</div>
         <div class="stat-label">Total Wins</div>
-        <div class="stat-sub">🗳️ ${gs.battle_votes} votes cast</div>
+        <div class="stat-sub">Across all games</div>
       </div>`;
     // Update game card meta
     const qs = document.getElementById('gcQuizStreak');
@@ -2184,7 +2184,7 @@ function openGame(type) {
   }
 }
 
-function closeGame() {
+async function closeGame() {
   // Stop soundtrack audio
   const stIframe = document.getElementById('stIframe');
   if (stIframe) stIframe.src = '';
@@ -2194,6 +2194,8 @@ function closeGame() {
   document.getElementById('gameBattle')?.style && (document.getElementById('gameBattle').style.display = 'none');
   document.getElementById('gamePoster').style.display = 'none';
   document.getElementById('gameSoundtrack').style.display = 'none';
+  // Small delay so any in-flight XP POST finishes before we re-fetch the hub stats
+  await new Promise(r => setTimeout(r, 400));
   loadGamesHub();
 }
 
