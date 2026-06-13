@@ -695,9 +695,9 @@
             <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:4px;">🎵 Guess The Soundtrack</h3>
             <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:10px;">Listen to the music and pick the right movie from your watched list.</p>
             <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
-              <span style="font-size:0.78em; color:var(--text-muted);" id="stXpLabel">Loading XP…</span>
+              <span class="game-xp-label" style="font-size:0.78em; color:var(--text-muted); white-space:nowrap;">Loading XP…</span>
               <div style="flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden;">
-                <div id="stXpBar" style="height:100%; width:0%; background:#E8B84B; border-radius:3px; transition:width 0.6s;"></div>
+                <div class="game-xp-bar" style="height:100%; width:0%; background:#E8B84B; border-radius:3px; transition:width 0.6s;"></div>
               </div>
             </div>
             <div id="soundtrackArena"></div>
@@ -708,7 +708,13 @@
         <div id="gameQuiz" style="display:none;">
           <div style="max-width:650px; margin:0 auto; text-align:center;">
             <button onclick="closeGame()" class="game-back-btn">← Back to Games</button>
-            <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:24px;">🧠 Daily Quiz</h3>
+            <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:10px;">🧠 Daily Quiz</h3>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+              <span class="game-xp-label" style="font-size:0.78em; color:var(--text-muted); white-space:nowrap;">Loading XP…</span>
+              <div style="flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden;">
+                <div class="game-xp-bar" style="height:100%; width:0%; background:#E8B84B; border-radius:3px; transition:width 0.6s;"></div>
+              </div>
+            </div>
             <div id="quizScore" style="display:flex; justify-content:center; gap:20px; margin-bottom:24px;">
               <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 28px;">
                 <div style="font-size:1.8em; font-weight:800; color:#00e054;" id="quizCorrect">0</div>
@@ -735,7 +741,13 @@
           <div style="max-width:560px; margin:0 auto; text-align:center;">
             <button onclick="closeGame()" class="game-back-btn">← Back to Games</button>
             <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:8px;">🎬 Guess The Poster</h3>
-            <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:24px;">Identify the movie from a blurred poster. Use hints to help — but you'll score less!</p>
+            <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:10px;">Identify the movie from a blurred poster. Use hints to help — but you'll score less!</p>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+              <span class="game-xp-label" style="font-size:0.78em; color:var(--text-muted); white-space:nowrap;">Loading XP…</span>
+              <div style="flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden;">
+                <div class="game-xp-bar" style="height:100%; width:0%; background:#E8B84B; border-radius:3px; transition:width 0.6s;"></div>
+              </div>
+            </div>
             <div id="posterArena"></div>
           </div>
         </div>

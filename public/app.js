@@ -2172,14 +2172,16 @@ function openGame(type) {
     quizCorrect = 0; quizWrong = 0;
     document.getElementById('quizCorrect').textContent = '0';
     document.getElementById('quizWrong').textContent = '0';
+    refreshGameXP();
     loadQuiz();
   } else if (type === 'poster') {
     document.getElementById('gamePoster').style.display = 'block';
     posterUsedTitles = [];
+    refreshGameXP();
     loadPosterGame();
   } else if (type === 'soundtrack') {
     document.getElementById('gameSoundtrack').style.display = 'block';
-    refreshSoundtrackXP();
+    refreshGameXP();
     loadSoundtrackGame();
   }
 }
@@ -2302,7 +2304,7 @@ function submitSoundtrackGuess(guess, answer, btn) {
   if (correct) {
     fb.innerHTML = '✅ Correct! <span style="color:#E8B84B;font-size:0.9em;">+75 XP</span>';
     fb.style.color = 'var(--green)';
-    awardGameXP(75, 'soundtrack').then(() => refreshSoundtrackXP());
+    awardGameXP(75, 'soundtrack').then(() => refreshGameXP());
   } else {
     fb.textContent = `❌ It was "${answer}"`;
     fb.style.color = '#e84040';
@@ -2310,14 +2312,12 @@ function submitSoundtrackGuess(guess, answer, btn) {
   document.getElementById('stNextBtn').style.display = 'inline-block';
 }
 
-async function refreshSoundtrackXP() {
+async function refreshGameXP() {
   try {
     const gs = await fetch('/api/games/profile').then(r => r.json());
     const xpPct = Math.round(((gs.xp % 500) / 500) * 100);
-    const bar = document.getElementById('stXpBar');
-    const label = document.getElementById('stXpLabel');
-    if (bar) bar.style.width = xpPct + '%';
-    if (label) label.textContent = `Level ${gs.level} · ${gs.xp % 500}/500 XP`;
+    document.querySelectorAll('.game-xp-bar').forEach(bar => bar.style.width = xpPct + '%');
+    document.querySelectorAll('.game-xp-label').forEach(label => label.textContent = `Level ${gs.level} · ${gs.xp % 500}/500 XP`);
   } catch(e) {}
 }
 
@@ -2517,7 +2517,7 @@ function submitPosterGuess() {
   const pts = [100, 75, 50, 25][posterHintsUsed] || 25;
   const fb = document.getElementById('posterFeedback');
   if (correct) {
-    awardGameXP(pts, 'poster');
+    awardGameXP(pts, 'poster').then(() => refreshGameXP());
     // Unblur then re-render with answered state (shows single Next button)
     setTimeout(() => {
       posterAnswered = true;
@@ -2603,7 +2603,7 @@ function answerQuiz(chosen) {
     quizCorrect++;
     feedback.innerHTML = `✅ Correct! <span style="color:#E8B84B;font-size:0.85em;">+50 XP</span>`;
     feedback.style.color = '#00e054';
-    awardGameXP(50, 'quiz');
+    awardGameXP(50, 'quiz').then(() => refreshGameXP());
     fetch('/api/badges/quiz-correct', { method: 'POST' })
       .then(r => r.json()).then(d => handleNewBadges(d.newBadges)).catch(() => {});
   } else {
