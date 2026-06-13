@@ -935,6 +935,10 @@ const sectionNames = {
 };
 
 async function showSection(section) {
+  // Stop soundtrack audio whenever navigating away
+  const stIframe = document.getElementById('stIframe');
+  if (stIframe) stIframe.src = '';
+
   document.getElementById('homeSection').style.display = 'none';
   document.getElementById('moviesSection').style.display = 'none';
   document.getElementById('watchlistSection').style.display = 'none';
@@ -2178,11 +2182,16 @@ function openGame(type) {
     loadPosterGame();
   } else if (type === 'soundtrack') {
     document.getElementById('gameSoundtrack').style.display = 'block';
+    refreshSoundtrackXP();
     loadSoundtrackGame();
   }
 }
 
 function closeGame() {
+  // Stop soundtrack audio
+  const stIframe = document.getElementById('stIframe');
+  if (stIframe) stIframe.src = '';
+
   document.getElementById('gamesHub').style.display = 'block';
   document.getElementById('gameQuiz').style.display = 'none';
   document.getElementById('gameBattle').style.display = 'none';
@@ -2292,14 +2301,25 @@ function submitSoundtrackGuess(guess, answer, btn) {
   });
 
   if (correct) {
-    fb.textContent = '✅ Correct! +75 XP';
+    fb.innerHTML = '✅ Correct! <span style="color:#E8B84B;font-size:0.9em;">+75 XP</span>';
     fb.style.color = 'var(--green)';
-    awardGameXP(75, 'soundtrack');
+    awardGameXP(75, 'soundtrack').then(() => refreshSoundtrackXP());
   } else {
     fb.textContent = `❌ It was "${answer}"`;
     fb.style.color = '#e84040';
   }
   document.getElementById('stNextBtn').style.display = 'inline-block';
+}
+
+async function refreshSoundtrackXP() {
+  try {
+    const gs = await fetch('/api/games/profile').then(r => r.json());
+    const xpPct = Math.round(((gs.xp % 500) / 500) * 100);
+    const bar = document.getElementById('stXpBar');
+    const label = document.getElementById('stXpLabel');
+    if (bar) bar.style.width = xpPct + '%';
+    if (label) label.textContent = `Level ${gs.level} · ${gs.xp % 500}/500 XP`;
+  } catch(e) {}
 }
 
 async function awardGameXP(xp, gameType) {
@@ -2310,9 +2330,8 @@ async function awardGameXP(xp, gameType) {
       body: JSON.stringify({ xp, gameType, won: true })
     });
     const data = await res.json();
-    if (data.level > prevLevel) {
-      showLevelUpToast(data.level);
-    }
+    if (data.level > prevLevel) showLevelUpToast(data.level);
+    return data;
   } catch(e) {}
 }
 

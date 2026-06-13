@@ -1116,7 +1116,7 @@ app.post('/api/games/xp', requireAuth, async (req, res) => {
     const newBestStreak = Math.max(gs.best_streak, newStreak);
     const newXP = gs.xp + (xp || 0);
     const newLevel = Math.floor(newXP / 500) + 1;
-    const colMap = { quiz: 'quiz_wins', battle: 'battle_votes', poster: 'poster_guesses' };
+    const colMap = { quiz: 'quiz_wins', battle: 'battle_votes', poster: 'poster_guesses', soundtrack: 'total_games' };
     const col = colMap[gameType] || 'total_games';
     await db.query(`
       UPDATE game_stats SET xp=$1, level=$2, total_games=total_games+1,
