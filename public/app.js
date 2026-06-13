@@ -2844,7 +2844,7 @@ async function loadFriends() {
     list.innerHTML = friends.map(f => `
       <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:14px;">
-          <span style="font-size:2em; display:inline-flex; align-items:center;">${avatarWithBadge(f.avatar, f.active_badge, '2em')}</span>
+          <span style="display:inline-flex; align-items:center; width:42px; height:42px; flex-shrink:0;">${avatarWithBadge(f.avatar, f.active_badge, '42px')}</span>
           <div>
             <div style="color:var(--text); font-weight:700;">${f.username}</div>
             <div style="color:var(--text-muted); font-size:0.8em;">${f.movie_count} movies watched</div>
