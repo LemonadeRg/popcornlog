@@ -647,7 +647,7 @@
           <div id="gameStatsRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:32px;"></div>
 
           <!-- Game Cards -->
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+          <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:20px;">
 
             <!-- Daily Quiz -->
             <div class="game-card" onclick="openGame('quiz')">
@@ -684,6 +684,28 @@
               </div>
               <button class="game-card-btn">Play</button>
             </div>
+            <!-- Guess The Soundtrack -->
+            <div class="game-card" onclick="openGame('soundtrack')">
+              <div class="game-card-icon">🎵</div>
+              <div class="game-card-badge">From Your List</div>
+              <h3 class="game-card-title">Guess The Soundtrack</h3>
+              <p class="game-card-desc">Listen to a clip from a movie's soundtrack and guess which film it belongs to!</p>
+              <div class="game-card-meta">
+                <span id="gcSoundtrackPlayed">🎵 Loading...</span>
+              </div>
+              <button class="game-card-btn">Play</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SOUNDTRACK GAME -->
+        <div id="gameSoundtrack" style="display:none;">
+          <div style="max-width:580px; margin:0 auto; text-align:center;">
+            <button onclick="closeGame()" class="game-back-btn">← Back to Games</button>
+            <h3 style="color:var(--text); font-size:1.3em; font-weight:800; margin-bottom:4px;">🎵 Guess The Soundtrack</h3>
+            <p style="color:var(--text-dim); font-size:0.88em; margin-bottom:24px;">Listen to the music and pick the right movie from your watched list.</p>
+            <div id="soundtrackArena"></div>
           </div>
         </div>
 

@@ -2149,9 +2149,11 @@ async function loadGamesHub() {
     const qs = document.getElementById('gcQuizStreak');
     const bv = document.getElementById('gcBattleVotes');
     const pg = document.getElementById('gcPosterGuesses');
+    const st = document.getElementById('gcSoundtrackPlayed');
     if (qs) qs.textContent = `🔥 Streak: ${gs.current_streak} day${gs.current_streak !== 1 ? 's' : ''}`;
     if (bv) bv.textContent = `🗳️ ${gs.battle_votes} battle${gs.battle_votes !== 1 ? 's' : ''} voted`;
     if (pg) pg.textContent = `🎯 ${gs.poster_guesses} poster${gs.poster_guesses !== 1 ? 's' : ''} guessed`;
+    if (st) st.textContent = `🎵 ${allMovies?.length || 0} movies available`;
   } catch(e) {}
 }
 
@@ -2160,6 +2162,7 @@ function openGame(type) {
   document.getElementById('gameQuiz').style.display = 'none';
   document.getElementById('gameBattle').style.display = 'none';
   document.getElementById('gamePoster').style.display = 'none';
+  document.getElementById('gameSoundtrack').style.display = 'none';
   if (type === 'quiz') {
     document.getElementById('gameQuiz').style.display = 'block';
     quizCorrect = 0; quizWrong = 0;
@@ -2173,6 +2176,9 @@ function openGame(type) {
     document.getElementById('gamePoster').style.display = 'block';
     posterUsedTitles = [];
     loadPosterGame();
+  } else if (type === 'soundtrack') {
+    document.getElementById('gameSoundtrack').style.display = 'block';
+    loadSoundtrackGame();
   }
 }
 
@@ -2181,7 +2187,119 @@ function closeGame() {
   document.getElementById('gameQuiz').style.display = 'none';
   document.getElementById('gameBattle').style.display = 'none';
   document.getElementById('gamePoster').style.display = 'none';
+  document.getElementById('gameSoundtrack').style.display = 'none';
   loadGamesHub();
+}
+
+// ===== SOUNDTRACK GAME =====
+let _stUsedTitles = [];
+let _stAnswered   = false;
+
+async function loadSoundtrackGame() {
+  const arena = document.getElementById('soundtrackArena');
+  arena.innerHTML = `<div style="color:var(--text-muted);padding:30px;">🎵 Loading…</div>`;
+
+  // Need at least 4 watched movies
+  const movies = (allMovies || []);
+  if (movies.length < 4) {
+    arena.innerHTML = `<div style="color:var(--text-muted);padding:30px;">You need at least 4 watched movies to play this game!</div>`;
+    return;
+  }
+
+  // Pick answer from movies not recently used
+  const pool = movies.filter(m => !_stUsedTitles.includes(m.title));
+  if (!pool.length) _stUsedTitles = [];
+  const shuffled = [...(pool.length ? pool : movies)].sort(() => Math.random() - 0.5);
+
+  // Try movies until we find one with a video
+  let answerMovie = null, youtubeKey = null;
+  for (const m of shuffled) {
+    try {
+      const r = await fetch(`/api/soundtrack-video?title=${encodeURIComponent(m.title)}&year=${m.year||''}`);
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (d.youtubeKey) { answerMovie = m; youtubeKey = d.youtubeKey; break; }
+    } catch(e) {}
+  }
+
+  if (!answerMovie) {
+    arena.innerHTML = `<div style="color:var(--text-muted);padding:30px;">Couldn't find a video for any of your movies. Try again!</div>`;
+    return;
+  }
+
+  _stUsedTitles.push(answerMovie.title);
+  _stAnswered = false;
+
+  // Pick 3 wrong options
+  const wrong = movies.filter(m => m.title !== answerMovie.title).sort(() => Math.random() - 0.5).slice(0, 3);
+  const options = [...wrong, answerMovie].sort(() => Math.random() - 0.5);
+
+  renderSoundtrackRound(youtubeKey, answerMovie, options);
+}
+
+function renderSoundtrackRound(youtubeKey, answer, options) {
+  const arena = document.getElementById('soundtrackArena');
+  arena.innerHTML = `
+    <!-- Music player area -->
+    <div style="position:relative; margin-bottom:24px;">
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div style="font-size:3em; animation:stPulse 1.4s ease-in-out infinite;">🎵</div>
+        <div style="font-size:0.85em; color:var(--text-muted);">Press play then guess the movie</div>
+        <!-- YouTube embed hidden behind a music visualizer UI -->
+        <div style="position:relative; width:100%; border-radius:10px; overflow:hidden; background:#000; height:0; padding-bottom:56.25%;">
+          <iframe id="stIframe"
+            src="https://www.youtube-nocookie.com/embed/${youtubeKey}?rel=0&modestbranding=1&enablejsapi=1"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen
+            allow="encrypted-media; picture-in-picture"></iframe>
+          <!-- blurred overlay so only audio matters -->
+          <div style="position:absolute;inset:0;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(0,0,0,0.55);pointer-events:none;border-radius:10px;"></div>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:8px;">
+            <div style="font-size:2em;">🎬</div>
+            <div style="color:#fff;font-size:0.78em;opacity:0.7;">Video hidden — listen carefully!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 choice buttons -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;" id="stOptions">
+      ${options.map(m => `
+        <button onclick="submitSoundtrackGuess('${m.title.replace(/'/g,"\\'")}', '${answer.title.replace(/'/g,"\\'")}', this)"
+          style="padding:14px 10px; background:var(--surface); color:var(--text); border:2px solid var(--border); border-radius:10px; cursor:pointer; font-family:inherit; font-size:0.88em; font-weight:600; line-height:1.3; transition:all 0.15s;"
+          onmouseover="if(!this.disabled)this.style.borderColor='var(--green)'"
+          onmouseout="if(!this.disabled)this.style.borderColor='var(--border)'">
+          ${m.title}${m.year ? `<span style="display:block;font-size:0.78em;opacity:0.5;font-weight:400;">${m.year}</span>` : ''}
+        </button>`).join('')}
+    </div>
+    <div id="stFeedback" style="font-size:1.05em; font-weight:700; min-height:28px; margin-bottom:16px;"></div>
+    <button id="stNextBtn" onclick="loadSoundtrackGame()" style="display:none; padding:12px 36px; background:var(--green); color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.9em; font-family:inherit; text-transform:uppercase; letter-spacing:1px;">Next Track ›</button>
+  `;
+}
+
+function submitSoundtrackGuess(guess, answer, btn) {
+  if (_stAnswered) return;
+  _stAnswered = true;
+  const correct = guess === answer;
+  const pts = correct ? 75 : 0;
+  const fb = document.getElementById('stFeedback');
+
+  // Colour all buttons
+  document.querySelectorAll('#stOptions button').forEach(b => {
+    b.disabled = true;
+    const t = b.textContent.trim().split('\n')[0].trim();
+    if (t === answer) { b.style.borderColor='var(--green)'; b.style.background='rgba(0,224,84,0.12)'; }
+    else if (b === btn && !correct) { b.style.borderColor='#e84040'; b.style.background='rgba(232,64,64,0.1)'; }
+  });
+
+  if (correct) {
+    fb.textContent = '✅ Correct! +75 XP';
+    fb.style.color = 'var(--green)';
+    awardGameXP(75, 'soundtrack');
+  } else {
+    fb.textContent = `❌ It was "${answer}"`;
+    fb.style.color = '#e84040';
+  }
+  document.getElementById('stNextBtn').style.display = 'inline-block';
 }
 
 async function awardGameXP(xp, gameType) {

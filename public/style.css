@@ -1228,6 +1228,11 @@ body.light-mode .auth-logo-img {
   50%       { transform: translateY(-6px); }
 }
 
+@keyframes stPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.18); opacity: 0.7; }
+}
+
 /* Brand name */
 .auth-brand-name {
   font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;

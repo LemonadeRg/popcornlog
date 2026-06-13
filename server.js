@@ -490,6 +490,27 @@ app.get('/api/home/trending', async (req, res) => { // public — used for auth 
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
+// Returns a YouTube key for a movie's soundtrack/theme/trailer
+app.get('/api/soundtrack-video', requireAuth, async (req, res) => {
+  const { title, year } = req.query;
+  if (!title) return res.status(400).json({ error: 'title required' });
+  try {
+    const search = await fetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&year=${year||''}&language=en-US`);
+    const sd = await search.json();
+    const movie = sd.results?.[0];
+    if (!movie) return res.status(404).json({ error: 'not found' });
+    const vr = await fetch(`${TMDB_BASE}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+    const vd = await vr.json();
+    const videos = (vd.results || []).filter(v => v.site === 'YouTube');
+    const pick =
+      videos.find(v => /soundtrack|theme|score|music/i.test(v.name)) ||
+      videos.find(v => v.type === 'Trailer' && v.official) ||
+      videos.find(v => v.type === 'Trailer');
+    if (!pick) return res.status(404).json({ error: 'no video' });
+    res.json({ youtubeKey: pick.key, name: pick.name });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/movie-cast', requireAuth, async (req, res) => {
   const { title, year } = req.query;
   if (!title) return res.status(400).json({ error: 'title required' });
